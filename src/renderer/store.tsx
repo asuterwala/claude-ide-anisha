@@ -1,6 +1,14 @@
 import { createContext, useContext, useReducer, type Dispatch, type ReactNode } from 'react'
 import type { Tab, ClaudeStatus } from '../shared/types'
 
+export interface BehaviorState {
+  featuresUsed: Set<string>
+  firstTerminalAt: number | null // timestamp
+  isFirstLaunch: boolean
+  firedTipIds: Set<string>
+  triggeredTips: Array<{ id: string; message: string; timestamp: number }>
+}
+
 interface AppState {
   tabs: Tab[]
   activeTabId: string
@@ -9,6 +17,7 @@ interface AppState {
   claudeStatus: ClaudeStatus
   gitBranch: string | null
   splitTabId: string | null
+  behavior: BehaviorState
 }
 
 type Action =
@@ -23,6 +32,9 @@ type Action =
   | { type: 'UPDATE_TAB_LABEL'; tabId: string; label: string }
   | { type: 'SET_SPLIT_TAB'; tabId: string | null }
   | { type: 'OPEN_IN_SPLIT'; tab: Tab }
+  | { type: 'TRACK_FEATURE'; feature: string }
+  | { type: 'FIRE_TIP'; tipId: string; message: string }
+  | { type: 'SET_FIRST_LAUNCH'; isFirst: boolean }
 
 const dashboardTab: Tab = {
   id: 'dashboard',
@@ -38,13 +50,25 @@ const initialState: AppState = {
   sidebarOpen: true,
   claudeStatus: { model: null, cost: null, tokens: null, context: null },
   gitBranch: null,
-  splitTabId: null
+  splitTabId: null,
+  behavior: {
+    featuresUsed: new Set<string>(),
+    firstTerminalAt: null,
+    isFirstLaunch: false,
+    firedTipIds: new Set<string>(),
+    triggeredTips: [],
+  }
 }
 
 function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
-    case 'ADD_TAB':
-      return { ...state, tabs: [...state.tabs, action.tab], activeTabId: action.tab.id }
+    case 'ADD_TAB': {
+      const newState = { ...state, tabs: [...state.tabs, action.tab], activeTabId: action.tab.id }
+      if (action.tab.type === 'terminal' && !state.behavior.firstTerminalAt) {
+        newState.behavior = { ...state.behavior, firstTerminalAt: Date.now() }
+      }
+      return newState
+    }
     case 'CLOSE_TAB': {
       const tabs = state.tabs.filter(t => t.id !== action.tabId)
       const activeTabId = state.activeTabId === action.tabId
@@ -71,6 +95,28 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, splitTabId: action.tabId }
     case 'OPEN_IN_SPLIT':
       return { ...state, tabs: [...state.tabs, action.tab], splitTabId: action.tab.id }
+    case 'TRACK_FEATURE': {
+      const featuresUsed = new Set(state.behavior.featuresUsed)
+      featuresUsed.add(action.feature)
+      return { ...state, behavior: { ...state.behavior, featuresUsed } }
+    }
+    case 'FIRE_TIP': {
+      const firedTipIds = new Set(state.behavior.firedTipIds)
+      firedTipIds.add(action.tipId)
+      return {
+        ...state,
+        behavior: {
+          ...state.behavior,
+          firedTipIds,
+          triggeredTips: [
+            { id: action.tipId, message: action.message, timestamp: Date.now() },
+            ...state.behavior.triggeredTips,
+          ],
+        },
+      }
+    }
+    case 'SET_FIRST_LAUNCH':
+      return { ...state, behavior: { ...state.behavior, isFirstLaunch: action.isFirst } }
     default:
       return state
   }

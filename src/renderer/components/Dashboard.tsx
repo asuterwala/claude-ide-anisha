@@ -112,6 +112,40 @@ export default function Dashboard({ visible }: { visible: boolean }) {
         <StatCard label="Model" value={state.claudeStatus.model || '—'} color="#dcdcaa" />
       </div>
 
+      {/* Tips for You */}
+      <div style={{
+        background: '#2d2d2d',
+        borderRadius: 6,
+        padding: 16,
+        border: '1px solid #3e3e3e',
+        marginBottom: 16,
+      }}>
+        <div style={{ color: '#4fc1ff', fontSize: 11, marginBottom: 12, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span>💡</span> Tips for You
+        </div>
+        {state.behavior.triggeredTips.length === 0 ? (
+          <div style={{ color: '#666', fontSize: 13, padding: '4px 0' }}>
+            Keep going — tips will appear as you work.
+          </div>
+        ) : (
+          state.behavior.triggeredTips.map((tip, i) => (
+            <div
+              key={tip.id}
+              style={{
+                padding: '8px 0',
+                borderBottom: i < state.behavior.triggeredTips.length - 1 ? '1px solid #3e3e3e' : 'none',
+                display: 'flex',
+                gap: 10,
+                alignItems: 'baseline',
+              }}
+            >
+              <span style={{ color: '#4fc1ff', fontSize: 12, flexShrink: 0 }}>💡</span>
+              <span style={{ color: '#ccc', fontSize: 13 }}>{tip.message}</span>
+            </div>
+          ))
+        )}
+      </div>
+
       <div style={{
         background: '#2d2d2d',
         borderRadius: 6,

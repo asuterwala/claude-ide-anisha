@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useAppState } from './store'
 import { useClaudeStatus } from './hooks/useClaudeStatus'
+import { evaluateTips } from './tips'
+import type { TipContext } from './tips'
 import TabBar from './components/TabBar'
 import FileExplorer from './components/FileExplorer'
 import TerminalTab from './components/TerminalTab'
@@ -9,17 +11,24 @@ import Dashboard from './components/Dashboard'
 import StatusBar from './components/StatusBar'
 import QuickOpen from './components/QuickOpen'
 import ProjectSearch from './components/ProjectSearch'
+import Toast from './components/Toast'
 
 export default function App() {
   const { state, dispatch } = useAppState()
   useClaudeStatus()
   const [quickOpenVisible, setQuickOpenVisible] = useState(false)
   const [projectSearchVisible, setProjectSearchVisible] = useState(false)
+  const [currentToast, setCurrentToast] = useState<{ id: string; message: string } | null>(null)
 
   useEffect(() => {
     async function init() {
       // Small delay to ensure window is fully ready before showing dialog
       await new Promise(r => setTimeout(r, 500))
+
+      // Check if first launch
+      const sessions = await window.api.getRecentSessions()
+      dispatch({ type: 'SET_FIRST_LAUNCH', isFirst: sessions.length === 0 })
+
       try {
         const dir = await window.api.selectDirectory()
         if (dir) {
@@ -45,7 +54,7 @@ export default function App() {
     return () => clearInterval(interval)
   }, [state.projectPath, dispatch])
 
-  // Global keyboard shortcuts
+  // Global keyboard shortcuts + feature tracking
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const isMod = e.metaKey || e.ctrlKey
@@ -53,19 +62,79 @@ export default function App() {
         e.preventDefault()
         setQuickOpenVisible(v => !v)
         setProjectSearchVisible(false)
+        dispatch({ type: 'TRACK_FEATURE', feature: 'quickOpen' })
       }
       if (isMod && e.shiftKey && e.key === 'f') {
         e.preventDefault()
         setProjectSearchVisible(v => !v)
         setQuickOpenVisible(false)
+        dispatch({ type: 'TRACK_FEATURE', feature: 'projectSearch' })
+      }
+      if (isMod && e.key === 'f' && !e.shiftKey) {
+        dispatch({ type: 'TRACK_FEATURE', feature: 'findReplace' })
+      }
+      if (isMod && e.key === 'h') {
+        dispatch({ type: 'TRACK_FEATURE', feature: 'findReplace' })
+      }
+      if (isMod && e.key === 's') {
+        dispatch({ type: 'TRACK_FEATURE', feature: 'fileSave' })
       }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [])
+  }, [dispatch])
+
+  // Track split usage
+  useEffect(() => {
+    if (state.splitTabId) {
+      dispatch({ type: 'TRACK_FEATURE', feature: 'split' })
+    }
+  }, [state.splitTabId, dispatch])
+
+  // Track file editing
+  useEffect(() => {
+    const editorTabs = state.tabs.filter(t => t.type === 'editor')
+    if (editorTabs.length > 0) {
+      dispatch({ type: 'TRACK_FEATURE', feature: 'fileEdit' })
+    }
+  }, [state.tabs, dispatch])
+
+  // Tip evaluation engine — runs every 30 seconds
+  useEffect(() => {
+    const check = () => {
+      if (currentToast) return // don't interrupt a visible toast
+
+      const sessionDuration = state.behavior.firstTerminalAt
+        ? Math.floor((Date.now() - state.behavior.firstTerminalAt) / 1000)
+        : 0
+
+      const ctx: TipContext = {
+        sessionCount: state.tabs.filter(t => t.type === 'terminal').length,
+        sessionDuration,
+        featuresUsed: state.behavior.featuresUsed,
+        editorTabCount: state.tabs.filter(t => t.type === 'editor').length,
+        isFirstLaunch: state.behavior.isFirstLaunch,
+      }
+
+      const tip = evaluateTips(ctx, state.behavior.firedTipIds)
+      if (tip) {
+        dispatch({ type: 'FIRE_TIP', tipId: tip.id, message: tip.message })
+        setCurrentToast({ id: tip.id, message: tip.message })
+      }
+    }
+
+    // Check shortly after mount, then every 30 seconds
+    const initialTimer = setTimeout(check, 5000)
+    const interval = setInterval(check, 30000)
+    return () => {
+      clearTimeout(initialTimer)
+      clearInterval(interval)
+    }
+  }, [state.tabs, state.behavior, currentToast, dispatch])
 
   const closeQuickOpen = useCallback(() => setQuickOpenVisible(false), [])
   const closeProjectSearch = useCallback(() => setProjectSearchVisible(false), [])
+  const dismissToast = useCallback(() => setCurrentToast(null), [])
 
   // Find the active editor tab and split editor tab
   const activeTab = state.tabs.find(t => t.id === state.activeTabId)
@@ -158,6 +227,9 @@ export default function App() {
       <StatusBar />
       <QuickOpen visible={quickOpenVisible} onClose={closeQuickOpen} />
       <ProjectSearch visible={projectSearchVisible} onClose={closeProjectSearch} />
+      {currentToast && (
+        <Toast message={currentToast.message} onDismiss={dismissToast} />
+      )}
     </div>
   )
 }
