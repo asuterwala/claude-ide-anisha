@@ -1,6 +1,6 @@
 import { ipcMain, dialog, app, BrowserWindow } from 'electron'
 import { readdir, readFile, writeFile, stat } from 'fs/promises'
-import { join } from 'path'
+import { join, relative } from 'path'
 import { getGitFileStatuses, getGitBranch } from './git-status'
 import { createPtySession, writePty, resizePty, destroyPty } from './claude-bridge'
 import { startWatching, stopWatching } from './file-watcher'
@@ -114,5 +114,73 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('watcher:stop', async () => {
     stopWatching()
+  })
+
+  // Recursively list all files in a project (for Cmd+P quick open)
+  ipcMain.handle('fs:listAllFiles', async (_, projectPath: string): Promise<string[]> => {
+    const results: string[] = []
+    const ignoreDirs = new Set(['.git', 'node_modules', '.next', 'dist', 'out', 'tmp', '.cache', 'coverage', 'build'])
+
+    async function walk(dir: string) {
+      const entries = await readdir(dir, { withFileTypes: true })
+      for (const entry of entries) {
+        if (entry.name.startsWith('.') && entry.name !== '.env') continue
+        if (ignoreDirs.has(entry.name)) continue
+        const fullPath = join(dir, entry.name)
+        if (entry.isDirectory()) {
+          await walk(fullPath)
+        } else {
+          results.push(relative(projectPath, fullPath))
+        }
+      }
+    }
+
+    await walk(projectPath)
+    results.sort()
+    return results
+  })
+
+  // Search file contents (for Cmd+Shift+F project search)
+  ipcMain.handle('fs:searchContent', async (_, projectPath: string, query: string): Promise<Array<{ file: string; line: number; text: string }>> => {
+    if (!query || query.length < 2) return []
+    const results: Array<{ file: string; line: number; text: string }> = []
+    const ignoreDirs = new Set(['.git', 'node_modules', '.next', 'dist', 'out', 'tmp', '.cache', 'coverage', 'build'])
+    const binaryExts = new Set(['.png', '.jpg', '.jpeg', '.gif', '.ico', '.woff', '.woff2', '.ttf', '.eot', '.zip', '.tar', '.gz', '.pdf'])
+    const maxResults = 200
+    const lowerQuery = query.toLowerCase()
+
+    async function walk(dir: string) {
+      if (results.length >= maxResults) return
+      const entries = await readdir(dir, { withFileTypes: true })
+      for (const entry of entries) {
+        if (results.length >= maxResults) return
+        if (entry.name.startsWith('.') && entry.name !== '.env') continue
+        if (ignoreDirs.has(entry.name)) continue
+        const fullPath = join(dir, entry.name)
+        if (entry.isDirectory()) {
+          await walk(fullPath)
+        } else {
+          const ext = entry.name.substring(entry.name.lastIndexOf('.'))
+          if (binaryExts.has(ext)) continue
+          try {
+            const content = await readFile(fullPath, 'utf-8')
+            const lines = content.split('\n')
+            for (let i = 0; i < lines.length; i++) {
+              if (results.length >= maxResults) break
+              if (lines[i].toLowerCase().includes(lowerQuery)) {
+                results.push({
+                  file: relative(projectPath, fullPath),
+                  line: i + 1,
+                  text: lines[i].trim().substring(0, 200)
+                })
+              }
+            }
+          } catch { /* skip unreadable files */ }
+        }
+      }
+    }
+
+    await walk(projectPath)
+    return results
   })
 }

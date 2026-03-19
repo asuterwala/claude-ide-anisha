@@ -1,5 +1,6 @@
 import { useAppState } from '../store'
 import type { Tab, TabType } from '../../shared/types'
+import { useCallback } from 'react'
 
 const tabColors: Record<TabType, string> = {
   dashboard: '#89d185',
@@ -38,6 +39,24 @@ export default function TabBar() {
       console.error('[TabBar] Error creating terminal:', err)
     }
   }
+
+  const handleSplit = useCallback((e: React.MouseEvent, tab: Tab) => {
+    e.stopPropagation()
+    if (tab.type === 'editor' && tab.filePath) {
+      // If this tab is already the split, close the split
+      if (state.splitTabId === tab.id) {
+        dispatch({ type: 'SET_SPLIT_TAB', tabId: null })
+        return
+      }
+      // If there's already a split, replace it
+      if (state.splitTabId) {
+        dispatch({ type: 'SET_SPLIT_TAB', tabId: tab.id })
+        return
+      }
+      // Open this tab as the split pane
+      dispatch({ type: 'SET_SPLIT_TAB', tabId: tab.id })
+    }
+  }, [state.splitTabId, dispatch])
 
   const handleClose = (e: React.MouseEvent, tabId: string) => {
     e.stopPropagation()
@@ -78,6 +97,20 @@ export default function TabBar() {
           <span style={{ color: tabColors[tab.type], fontSize: 10 }}>●</span>
           {tab.label}
           {tab.isDirty && <span style={{ color: '#fff' }}>●</span>}
+          {tab.type === 'editor' && (
+            <span
+              onClick={(e) => handleSplit(e, tab)}
+              title={state.splitTabId === tab.id ? 'Close split' : 'Open in split'}
+              style={{
+                color: state.splitTabId === tab.id ? '#4fc1ff' : '#666',
+                cursor: 'pointer',
+                marginLeft: 4,
+                fontSize: 11,
+              }}
+            >
+              ⫿
+            </span>
+          )}
           {tab.closeable && (
             <span
               onClick={(e) => handleClose(e, tab.id)}

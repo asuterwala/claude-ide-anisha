@@ -8,6 +8,7 @@ interface AppState {
   sidebarOpen: boolean
   claudeStatus: ClaudeStatus
   gitBranch: string | null
+  splitTabId: string | null
 }
 
 type Action =
@@ -20,6 +21,8 @@ type Action =
   | { type: 'SET_GIT_BRANCH'; branch: string | null }
   | { type: 'SET_TAB_DIRTY'; tabId: string; isDirty: boolean }
   | { type: 'UPDATE_TAB_LABEL'; tabId: string; label: string }
+  | { type: 'SET_SPLIT_TAB'; tabId: string | null }
+  | { type: 'OPEN_IN_SPLIT'; tab: Tab }
 
 const dashboardTab: Tab = {
   id: 'dashboard',
@@ -34,7 +37,8 @@ const initialState: AppState = {
   projectPath: null,
   sidebarOpen: true,
   claudeStatus: { model: null, cost: null, tokens: null, context: null },
-  gitBranch: null
+  gitBranch: null,
+  splitTabId: null
 }
 
 function reducer(state: AppState, action: Action): AppState {
@@ -46,7 +50,8 @@ function reducer(state: AppState, action: Action): AppState {
       const activeTabId = state.activeTabId === action.tabId
         ? tabs[tabs.length - 1]?.id ?? 'dashboard'
         : state.activeTabId
-      return { ...state, tabs, activeTabId }
+      const splitTabId = state.splitTabId === action.tabId ? null : state.splitTabId
+      return { ...state, tabs, activeTabId, splitTabId }
     }
     case 'SET_ACTIVE_TAB':
       return { ...state, activeTabId: action.tabId }
@@ -62,6 +67,10 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, tabs: state.tabs.map(t => t.id === action.tabId ? { ...t, isDirty: action.isDirty } : t) }
     case 'UPDATE_TAB_LABEL':
       return { ...state, tabs: state.tabs.map(t => t.id === action.tabId ? { ...t, label: action.label } : t) }
+    case 'SET_SPLIT_TAB':
+      return { ...state, splitTabId: action.tabId }
+    case 'OPEN_IN_SPLIT':
+      return { ...state, tabs: [...state.tabs, action.tab], splitTabId: action.tab.id }
     default:
       return state
   }

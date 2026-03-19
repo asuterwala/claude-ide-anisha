@@ -30,6 +30,8 @@ const api = {
   selectDirectory: () => ipcRenderer.invoke('dialog:selectDirectory'),
   getRecentSessions: () => ipcRenderer.invoke('sessions:getRecent'),
   addRecentSession: (projectPath: string) => ipcRenderer.invoke('sessions:addRecent', projectPath),
+  listAllFiles: (projectPath: string): Promise<string[]> => ipcRenderer.invoke('fs:listAllFiles', projectPath),
+  searchContent: (projectPath: string, query: string): Promise<Array<{ file: string; line: number; text: string }>> => ipcRenderer.invoke('fs:searchContent', projectPath, query),
 }
 
 contextBridge.exposeInMainWorld('api', api)
