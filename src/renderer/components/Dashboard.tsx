@@ -294,6 +294,45 @@ export default function Dashboard({ visible }: { visible: boolean }) {
         </div>
       )}
 
+      {/* Sign in prompt — endpoint configured but stats not loading */}
+      {statsConfigured === true && !teamStats && (
+        <div style={{
+          background: '#2d2d2d',
+          borderRadius: 6,
+          padding: 16,
+          border: '1px solid #3e3e3e',
+          marginBottom: 16,
+        }}>
+          <div style={{ color: '#888', fontSize: 11, marginBottom: 8, textTransform: 'uppercase' }}>
+            Team Stats
+          </div>
+          <div style={{ color: '#999', fontSize: 12, marginBottom: 12 }}>
+            Sign in with your Gusto Google account to see how your usage compares to other Gusties.
+          </div>
+          <button
+            onClick={async () => {
+              const success = await window.api.googleLogin()
+              if (success) {
+                const stats = await window.api.getTeamStats()
+                setTeamStats(stats)
+              }
+            }}
+            style={{
+              padding: '10px 20px',
+              background: '#4fc1ff',
+              color: '#000',
+              border: 'none',
+              borderRadius: 4,
+              cursor: 'pointer',
+              fontSize: 13,
+              fontWeight: 'bold',
+            }}
+          >
+            Sign in with Google
+          </button>
+        </div>
+      )}
+
       {/* Team Stats Setup (only shown if not configured yet) */}
       {statsConfigured === false && (
         <div style={{
