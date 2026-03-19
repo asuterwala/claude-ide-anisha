@@ -1,0 +1,20 @@
+appId: com.claude-ide.app
+productName: Claude IDE
+mac:
+  category: public.app-category.developer-tools
+  icon: assets/icon.icns
+  target:
+    - dmg
+    - dir
+directories:
+  output: dist
+  buildResources: assets
+files:
+  - out/**/*
+  - "!node_modules/**/*"
+  - node_modules/node-pty/**/*
+  - node_modules/chokidar/**/*
+asar: true
+asarUnpack:
+  - node_modules/node-pty/**/*
+npmRebuild: false
