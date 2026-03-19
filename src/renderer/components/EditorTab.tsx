@@ -92,7 +92,7 @@ export default function EditorTab({ tabId, filePath, visible }: Props) {
         onMount={handleEditorMount}
         onChange={handleChange}
         options={{
-          minimap: { enabled: false },
+          minimap: { enabled: true, scale: 2 },
           fontFamily: "'SF Mono', Menlo, Consolas, monospace",
           fontSize: 13,
           lineNumbers: 'on',
