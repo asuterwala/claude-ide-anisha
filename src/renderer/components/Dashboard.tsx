@@ -356,6 +356,9 @@ export default function Dashboard({ visible }: { visible: boolean }) {
               }}>
                 <span style={{ fontSize: 12 }}>★</span> What's New
               </div>
+              <div style={{ color: '#7a9a7a', fontSize: 11, marginBottom: 10 }}>
+                As new features and commands are added, they'll show up here so you can try them.
+              </div>
               {newEntries.map((entry, i) => (
                 <div
                   key={i}
