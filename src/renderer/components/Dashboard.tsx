@@ -185,6 +185,53 @@ export default function Dashboard({ visible }: { visible: boolean }) {
 
   return (
     <div style={{ flex: 1, padding: 20, background: '#1e1e1e', overflowY: 'auto' }}>
+      {/* Quick Start */}
+      <div style={{
+        background: 'linear-gradient(135deg, #1a2a3a 0%, #2d2d2d 100%)',
+        borderRadius: 8,
+        padding: '20px 24px',
+        border: '1px solid #3e3e3e',
+        marginBottom: 20,
+      }}>
+        <div style={{ color: '#fff', fontSize: 18, fontWeight: 'bold', marginBottom: 8 }}>
+          Welcome to Claude IDE
+        </div>
+        <div style={{ color: '#bbb', fontSize: 13, lineHeight: '22px', marginBottom: 16 }}>
+          Your AI pair programmer — ask it to build features, fix bugs, or explain code. Here's how to start:
+        </div>
+        <div style={{ display: 'flex', gap: 24 }}>
+          {[
+            { step: '1', icon: '＋', text: 'Click + above to open a terminal', detail: 'Claude Code starts automatically' },
+            { step: '2', icon: '💬', text: 'Type what you want in plain English', detail: '"Fix the login bug" or "Add a search bar"' },
+            { step: '3', icon: '📂', text: 'Click any file in the sidebar to view it', detail: 'Edit with Cmd+K, search with Cmd+P' },
+          ].map(({ step, icon, text, detail }) => (
+            <div key={step} style={{ flex: 1, display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+              <div style={{
+                width: 32,
+                height: 32,
+                borderRadius: '50%',
+                background: '#4fc1ff',
+                color: '#000',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 14,
+                fontWeight: 'bold',
+                flexShrink: 0,
+              }}>
+                {step}
+              </div>
+              <div>
+                <div style={{ color: '#e8e8e8', fontSize: 13, fontWeight: 'bold', marginBottom: 2 }}>
+                  {text}
+                </div>
+                <div style={{ color: '#888', fontSize: 11 }}>{detail}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 16, marginBottom: 20 }}>
         <StatCard label="Today's Cost" value={state.claudeStatus.cost || '—'} color="#4fc1ff" />
         <StatCard label="Active Sessions" value={String(activeSessions)} color="#89d185" />
