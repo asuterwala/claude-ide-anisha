@@ -96,22 +96,28 @@ mv "$MAIN_JS.tmp" "$MAIN_JS"
 echo "Patching preload..."
 PRELOAD_JS="$WORK_DIR/extract/out/preload/index.js"
 
-# Insert preload APIs before the closing }; of the api object
-sed -i '' '/^};$/i\
-'"$(sed 's/$/\\/' "$SCRIPT_DIR/src/preload-apis.js" | sed '$ s/\\$//')" "$PRELOAD_JS" 2>/dev/null || {
-  # Fallback: use python for more reliable injection
-  python3 -c "
+# Insert preload APIs inside the api object, before the closing };
+# The last property needs a comma added, then we insert new APIs
+python3 << PYEOF
 import re
+
 with open('$PRELOAD_JS', 'r') as f:
     content = f.read()
+
 with open('$SCRIPT_DIR/src/preload-apis.js', 'r') as f:
-    apis = f.read()
-# Find the last }; before contextBridge line
-content = content.replace('};\\nelectron.contextBridge', apis + '};\\nelectron.contextBridge')
+    new_apis = f.read()
+
+# Find the last api property (googleLogin) and add comma, then insert new APIs before };
+pattern = r'(googleLogin: \(\) => electron\.ipcRenderer\.invoke\("stats:googleLogin"\))\n(\};)'
+replacement = r'\1,\n' + new_apis + r'\n\2'
+
+new_content = re.sub(pattern, replacement, content)
+
 with open('$PRELOAD_JS', 'w') as f:
-    f.write(content)
-"
-}
+    f.write(new_content)
+
+print("  Preload APIs injected")
+PYEOF
 
 echo "Patching dashboard..."
 RENDERER_JS=$(ls "$WORK_DIR/extract/out/renderer/assets/"index-*.js 2>/dev/null | head -1)
