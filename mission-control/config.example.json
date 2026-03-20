@@ -1,0 +1,82 @@
+{
+  "user": {
+    "name": "Your Name",
+    "tagline": "Your executive orchestrator. Open a terminal to run workflows, or check your status below.",
+    "slackSignature": "_Sent by Claude Code_ :claude:"
+  },
+  "claude": {
+    "path": "/opt/homebrew/bin/claude",
+    "env": {
+      "CLAUDE_CODE_USE_BEDROCK": "true",
+      "AWS_PROFILE": "bedrock-users",
+      "AWS_REGION": "us-west-2"
+    }
+  },
+  "calendar": {
+    "mcpTool": "gcalgusto",
+    "enabled": true
+  },
+  "slack": {
+    "enabled": true,
+    "draftVoice": "direct, concise, collaborative",
+    "pulseChannels": [
+      { "id": "C0XXXXXXX", "name": "#general" },
+      { "id": "C0XXXXXXX", "name": "#engineering" }
+    ],
+    "quickRecipients": [
+      { "id": "U0XXXXXXX", "name": "Jane Smith", "type": "dm" },
+      { "id": "C0XXXXXXX", "name": "#team-channel", "type": "channel" }
+    ]
+  },
+  "skills": {
+    "categories": [
+      {
+        "label": "Productivity",
+        "skills": [
+          { "cmd": "/morning", "desc": "Morning brief + meeting prep" },
+          { "cmd": "/eod", "desc": "End of day wrap + summary" },
+          { "cmd": "/email-sweep", "desc": "Inbox triage" }
+        ]
+      },
+      {
+        "label": "Analysis",
+        "skills": [
+          { "cmd": "/monthly-flash", "desc": "Monthly flash report" }
+        ]
+      },
+      {
+        "label": "Building",
+        "skills": [
+          { "cmd": "/explain-code", "desc": "Code explainer" }
+        ]
+      }
+    ],
+    "timeSavedWeights": {
+      "/morning": 20,
+      "/eod": 15,
+      "/email-sweep": 20,
+      "/monthly-flash": 45,
+      "/explain-code": 8,
+      "slack-send": 5,
+      "meeting-prep": 10,
+      "meeting-context": 3,
+      "todo-manage": 1,
+      "session-open": 5,
+      "calendar-refresh": 2,
+      "default-skill": 10
+    }
+  },
+  "markets": {
+    "enabled": true,
+    "tickers": [
+      { "symbol": "^DJI", "name": "Dow Jones" },
+      { "symbol": "^GSPC", "name": "S&P 500" },
+      { "symbol": "^IXIC", "name": "Nasdaq" },
+      { "symbol": "IGV", "name": "Software (IGV)" }
+    ]
+  },
+  "timeSaved": {
+    "salaryRate": 300000,
+    "minuteRate": 2.40
+  }
+}
