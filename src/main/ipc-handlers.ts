@@ -430,4 +430,23 @@ export function registerIpcHandlers(): void {
     console.log('Sending slack to', channelId, ':', message)
     return { success: true }
   })
+
+  // Time Saved tracking
+  const TIME_SAVED_PATH = join(homedir(), '.memory', 'mission-control', 'time-saved.json')
+
+  ipcMain.handle('timeSaved:load', async () => {
+    try {
+      if (!existsSync(TIME_SAVED_PATH)) return {}
+      return JSON.parse(readFileSync(TIME_SAVED_PATH, 'utf-8'))
+    } catch { return {} }
+  })
+
+  ipcMain.handle('timeSaved:save', async (_event, data: any) => {
+    try {
+      const dir = join(homedir(), '.memory', 'mission-control')
+      if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
+      writeFileSync(TIME_SAVED_PATH, JSON.stringify(data, null, 2))
+      return { success: true }
+    } catch (error) { return { success: false, error: String(error) } }
+  })
 }
