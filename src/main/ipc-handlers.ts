@@ -356,4 +356,15 @@ export function registerIpcHandlers(): void {
       return DEFAULT_CONFIG
     }
   })
+
+  // Notion data fetching
+  ipcMain.handle('notion:fetch', async (_event, dashboardId: string) => {
+    // Placeholder - returns empty data structure
+    // Real implementation would call Claude CLI with MCP
+    return {
+      meetings: [],
+      tasks: [],
+      error: null
+    }
+  })
 }
