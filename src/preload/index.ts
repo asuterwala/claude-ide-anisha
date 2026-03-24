@@ -38,6 +38,17 @@ const api = {
   postStats: (data: { sessions: number; features: number; cost: string }): Promise<boolean | null> => ipcRenderer.invoke('stats:post', data),
   getTeamStats: (): Promise<{ teamSize: number; avgSessions: number; avgFeatures: number; avgCost: number } | null> => ipcRenderer.invoke('stats:getTeam'),
   googleLogin: (): Promise<boolean> => ipcRenderer.invoke('stats:googleLogin'),
+  loadConfig: () => ipcRenderer.invoke('config:load'),
+  fetchNotion: (dashboardId: string) => ipcRenderer.invoke('notion:fetch', dashboardId),
+  listPythonFiles: (path: string) => ipcRenderer.invoke('python:listFiles', path),
+  runStreamlit: (file: string, port: number) => ipcRenderer.invoke('streamlit:run', file, port),
+  stopStreamlit: (file: string) => ipcRenderer.invoke('streamlit:stop', file),
+  getStreamlitStatus: () => ipcRenderer.invoke('streamlit:status'),
+  sendToTerminal: (ptyId: string, data: string) => ipcRenderer.invoke('terminal:send', ptyId, data),
+  sendSlack: (channelId: string, message: string) => ipcRenderer.invoke('slack:send', channelId, message),
+  loadTimeSaved: () => ipcRenderer.invoke('timeSaved:load'),
+  saveTimeSaved: (data: unknown) => ipcRenderer.invoke('timeSaved:save', data),
+  showNotification: (title: string, body: string) => ipcRenderer.invoke('notification:show', title, body),
 }
 
 contextBridge.exposeInMainWorld('api', api)
