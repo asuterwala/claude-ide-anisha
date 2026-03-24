@@ -718,20 +718,22 @@ import { useAppState } from '../store'
 import { useConfig } from '../hooks/useConfig'
 import type { PythonFile, StreamlitApp } from '../../shared/types'
 
-export function ModelStatus() {
+export function ModelStatus({ projectPath }: { projectPath?: string }) {
   const { state, dispatch } = useAppState()
   const config = useConfig()
   const [nextPort, setNextPort] = useState(config?.streamlit.defaultPort || 8501)
 
-  const projectPath = state.tabs.find(t => t.type === 'terminal')?.projectPath || process.cwd()
+  // Use projectPath prop, or get from active terminal tab, or default to home
+  const activePath = projectPath || state.tabs.find(t => t.type === 'terminal')?.projectPath || '~'
 
   const refresh = useCallback(async () => {
+    if (!activePath || activePath === '~') return
     const [files, apps] = await Promise.all([
-      window.api.listPythonFiles(projectPath),
+      window.api.listPythonFiles(activePath),
       window.api.getStreamlitStatus()
     ])
     dispatch({ type: 'STREAMLIT_UPDATE', payload: { pythonFiles: files, apps } })
-  }, [projectPath, dispatch])
+  }, [activePath, dispatch])
 
   useEffect(() => {
     refresh()
