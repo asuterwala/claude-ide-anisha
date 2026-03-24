@@ -14,7 +14,12 @@ export default function TerminalTab({ ptyId, visible }: Props) {
   const terminalRef = useRef<Terminal | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
   const terminalBufferRef = useRef<string>('')
-  const { checkAndNotify } = useNotification()
+  const { checkAndNotify, cleanup } = useNotification()
+
+  useEffect(() => {
+    terminalBufferRef.current = '' // Reset buffer on ptyId change
+    return () => cleanup() // Cleanup timer on unmount
+  }, [ptyId, cleanup])
 
   useEffect(() => {
     if (!containerRef.current) return
