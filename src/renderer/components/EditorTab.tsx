@@ -160,7 +160,7 @@ export default function EditorTab({ tabId, filePath, visible }: Props) {
       <Editor
         defaultValue={content}
         language={getLanguage(filePath)}
-        theme="vs-dark"
+        theme="vs"
         onMount={handleEditorMount}
         onChange={handleChange}
         options={{
