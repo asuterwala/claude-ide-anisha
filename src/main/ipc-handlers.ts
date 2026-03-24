@@ -1,9 +1,9 @@
 import { ipcMain, dialog, app, BrowserWindow, net, session } from 'electron'
 import { readdir, readFile, writeFile, stat } from 'fs/promises'
-import { readFileSync, existsSync, writeFileSync, mkdirSync } from 'fs'
+import { readFileSync, existsSync, writeFileSync, mkdirSync, readdirSync, statSync } from 'fs'
 import { join, relative } from 'path'
 import { homedir } from 'os'
-import { execFile } from 'child_process'
+import { execFile, spawn } from 'child_process'
 import { promisify } from 'util'
 
 const execFileAsync = promisify(execFile)
@@ -16,6 +16,8 @@ const sessionsFile = () => join(app.getPath('userData'), 'recent-sessions.json')
 const teamStatsConfigFile = () => join(app.getPath('userData'), 'team-stats-config.json')
 const anonIdFile = () => join(app.getPath('userData'), 'anon-id.json')
 const CONFIG_PATH = join(homedir(), '.config', 'claude-ide-mc', 'config.json')
+
+const streamlitProcesses = new Map<string, { pid: number; port: number }>()
 
 const DEFAULT_CONFIG = {
   user: { name: '', slackSignature: '_Sent by Claude Code_ :claude:' },
@@ -366,5 +368,59 @@ export function registerIpcHandlers(): void {
       tasks: [],
       error: null
     }
+  })
+
+  // Streamlit handlers
+  ipcMain.handle('streamlit:list', async (_event, projectPath: string) => {
+    const files: any[] = []
+    try {
+      const entries = readdirSync(projectPath)
+      for (const entry of entries) {
+        if (entry.endsWith('.py')) {
+          const fullPath = join(projectPath, entry)
+          const content = readFileSync(fullPath, 'utf-8')
+          const isStreamlit = content.includes('import streamlit') || content.includes('from streamlit')
+          const stat = statSync(fullPath)
+          files.push({ path: fullPath, name: entry, isStreamlit, lastModified: stat.mtimeMs })
+        }
+      }
+    } catch (error) {
+      console.error('Failed to list Python files:', error)
+    }
+    return files
+  })
+
+  ipcMain.handle('streamlit:run', async (_event, filePath: string, port: number) => {
+    const proc = spawn('streamlit', ['run', filePath, '--server.port', String(port)], {
+      detached: true, stdio: 'ignore'
+    })
+    proc.unref()
+    streamlitProcesses.set(filePath, { pid: proc.pid!, port })
+    return { success: true, pid: proc.pid, port }
+  })
+
+  ipcMain.handle('streamlit:stop', async (_event, filePath: string) => {
+    const proc = streamlitProcesses.get(filePath)
+    if (proc) {
+      try {
+        process.kill(proc.pid)
+        streamlitProcesses.delete(filePath)
+        return { success: true }
+      } catch { return { success: false, error: 'Process not found' } }
+    }
+    return { success: false, error: 'No process tracked' }
+  })
+
+  ipcMain.handle('streamlit:status', async () => {
+    const apps: any[] = []
+    for (const [file, { pid, port }] of streamlitProcesses) {
+      try {
+        process.kill(pid, 0)
+        apps.push({ file, port, status: 'running', pid })
+      } catch {
+        streamlitProcesses.delete(file)
+      }
+    }
+    return apps
   })
 }
