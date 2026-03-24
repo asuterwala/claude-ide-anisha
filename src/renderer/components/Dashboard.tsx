@@ -2,6 +2,7 @@
 import { useConfig } from '../hooks/useConfig'
 import { NotionPanel } from './NotionPanel'
 import { ModelStatus } from './ModelStatus'
+import { RecentSessions } from './RecentSessions'
 import { SkillsLauncher } from './SkillsLauncher'
 import { QuickSlack } from './QuickSlack'
 import { TipsPanel } from './TipsPanel'
@@ -42,6 +43,7 @@ export default function Dashboard({ visible }: { visible: boolean }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <NotionPanel />
           <ModelStatus />
+          <RecentSessions />
           <TipsPanel />
         </div>
 
