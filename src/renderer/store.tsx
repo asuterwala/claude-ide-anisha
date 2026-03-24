@@ -1,5 +1,5 @@
 import { createContext, useContext, useReducer, type Dispatch, type ReactNode } from 'react'
-import type { Tab, ClaudeStatus } from '../shared/types'
+import type { Tab, ClaudeStatus, NotionMeeting, NotionTask, StreamlitApp, PythonFile, AppConfig } from '../shared/types'
 
 export interface BehaviorState {
   featuresUsed: Set<string>
@@ -18,6 +18,26 @@ interface AppState {
   gitBranch: string | null
   splitTabId: string | null
   behavior: BehaviorState
+  notion: {
+    meetings: NotionMeeting[]
+    tasks: NotionTask[]
+    loading: boolean
+    error: string | null
+    lastFetched: number | null
+  }
+  streamlit: {
+    apps: StreamlitApp[]
+    pythonFiles: PythonFile[]
+  }
+  timeSaved: {
+    todayMinutes: number
+    actions: string[]
+  }
+  notifications: {
+    enabled: boolean
+    lastNotified: number | null
+  }
+  config: AppConfig | null
 }
 
 type Action =
@@ -35,6 +55,14 @@ type Action =
   | { type: 'TRACK_FEATURE'; feature: string }
   | { type: 'FIRE_TIP'; tipId: string; message: string }
   | { type: 'SET_FIRST_LAUNCH'; isFirst: boolean }
+  | { type: 'NOTION_LOADING' }
+  | { type: 'NOTION_LOADED'; payload: { meetings: NotionMeeting[]; tasks: NotionTask[] } }
+  | { type: 'NOTION_ERROR'; payload: string }
+  | { type: 'STREAMLIT_UPDATE'; payload: { apps: StreamlitApp[]; pythonFiles: PythonFile[] } }
+  | { type: 'TIME_SAVED_INIT'; payload: { minutes: number; actions: string[] } }
+  | { type: 'TIME_SAVED_ADD'; payload: { action: string; minutes: number } }
+  | { type: 'CONFIG_LOADED'; payload: AppConfig }
+  | { type: 'NOTIFICATIONS_TOGGLE'; payload: boolean }
 
 const dashboardTab: Tab = {
   id: 'dashboard',
@@ -57,7 +85,12 @@ const initialState: AppState = {
     isFirstLaunch: false,
     firedTipIds: new Set<string>(),
     triggeredTips: [],
-  }
+  },
+  notion: { meetings: [], tasks: [], loading: false, error: null, lastFetched: null },
+  streamlit: { apps: [], pythonFiles: [] },
+  timeSaved: { todayMinutes: 0, actions: [] },
+  notifications: { enabled: true, lastNotified: null },
+  config: null,
 }
 
 function reducer(state: AppState, action: Action): AppState {
@@ -117,6 +150,31 @@ function reducer(state: AppState, action: Action): AppState {
     }
     case 'SET_FIRST_LAUNCH':
       return { ...state, behavior: { ...state.behavior, isFirstLaunch: action.isFirst } }
+    case 'NOTION_LOADING':
+      return { ...state, notion: { ...state.notion, loading: true, error: null } }
+    case 'NOTION_LOADED':
+      return { ...state, notion: {
+        meetings: action.payload.meetings,
+        tasks: action.payload.tasks,
+        loading: false,
+        error: null,
+        lastFetched: Date.now()
+      } }
+    case 'NOTION_ERROR':
+      return { ...state, notion: { ...state.notion, loading: false, error: action.payload } }
+    case 'STREAMLIT_UPDATE':
+      return { ...state, streamlit: action.payload }
+    case 'TIME_SAVED_INIT':
+      return { ...state, timeSaved: { todayMinutes: action.payload.minutes, actions: action.payload.actions } }
+    case 'TIME_SAVED_ADD':
+      return { ...state, timeSaved: {
+        todayMinutes: state.timeSaved.todayMinutes + action.payload.minutes,
+        actions: [...state.timeSaved.actions, action.payload.action]
+      } }
+    case 'CONFIG_LOADED':
+      return { ...state, config: action.payload }
+    case 'NOTIFICATIONS_TOGGLE':
+      return { ...state, notifications: { ...state.notifications, enabled: action.payload } }
     default:
       return state
   }
