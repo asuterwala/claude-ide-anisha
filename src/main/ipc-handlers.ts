@@ -423,4 +423,11 @@ export function registerIpcHandlers(): void {
     }
     return apps
   })
+
+  // Slack message sending
+  ipcMain.handle('slack:send', async (_event, channelId: string, message: string) => {
+    // Placeholder - would call MCP tool via Claude CLI
+    console.log('Sending slack to', channelId, ':', message)
+    return { success: true }
+  })
 }
