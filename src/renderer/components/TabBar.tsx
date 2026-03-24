@@ -69,10 +69,10 @@ export default function TabBar() {
 
   return (
     <div style={{
-      background: '#252526',
+      background: 'var(--bg-secondary)',
       display: 'flex',
       alignItems: 'stretch',
-      borderBottom: '1px solid #3e3e3e',
+      borderBottom: '1px solid var(--border-color)',
       height: 35,
       WebkitAppRegion: 'drag' as any,
       paddingLeft: 80
@@ -83,9 +83,9 @@ export default function TabBar() {
           onClick={() => dispatch({ type: 'SET_ACTIVE_TAB', tabId: tab.id })}
           style={{
             padding: '8px 16px',
-            background: tab.id === state.activeTabId ? '#1e1e1e' : '#2d2d2d',
-            color: tab.id === state.activeTabId ? '#fff' : '#999',
-            borderRight: '1px solid #3e3e3e',
+            background: tab.id === state.activeTabId ? 'var(--bg-primary)' : 'var(--bg-secondary)',
+            color: tab.id === state.activeTabId ? 'var(--text-primary)' : 'var(--text-muted)',
+            borderRight: '1px solid var(--border-color)',
             display: 'flex',
             alignItems: 'center',
             gap: 8,
@@ -96,13 +96,13 @@ export default function TabBar() {
         >
           <span style={{ color: tabColors[tab.type], fontSize: 10 }}>●</span>
           {tab.label}
-          {tab.isDirty && <span style={{ color: '#fff' }}>●</span>}
+          {tab.isDirty && <span style={{ color: 'var(--accent-primary)' }}>●</span>}
           {tab.type === 'editor' && (
             <span
               onClick={(e) => handleSplit(e, tab)}
               title={state.splitTabId === tab.id ? 'Close split' : 'Open in split'}
               style={{
-                color: state.splitTabId === tab.id ? '#4fc1ff' : '#666',
+                color: state.splitTabId === tab.id ? 'var(--accent-primary)' : 'var(--text-muted)',
                 cursor: 'pointer',
                 marginLeft: 4,
                 fontSize: 11,
@@ -114,7 +114,7 @@ export default function TabBar() {
           {tab.closeable && (
             <span
               onClick={(e) => handleClose(e, tab.id)}
-              style={{ color: '#666', cursor: 'pointer', marginLeft: 4 }}
+              style={{ color: 'var(--text-muted)', cursor: 'pointer', marginLeft: 4 }}
             >
               ×
             </span>
@@ -125,7 +125,7 @@ export default function TabBar() {
         onClick={handleAdd}
         style={{
           padding: '8px 16px',
-          color: '#666',
+          color: 'var(--text-muted)',
           fontSize: 14,
           cursor: 'pointer',
           display: 'flex',
