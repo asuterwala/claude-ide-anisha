@@ -365,16 +365,38 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('notion:fetch', async (_event, _dashboardId: string) => {
     try {
-      // Read meetings from calendar cache
+      // Read meetings from calendar cache, filter to upcoming only
       let meetings: any[] = []
       if (existsSync(CALENDAR_CACHE_PATH)) {
         const calendarData = JSON.parse(readFileSync(CALENDAR_CACHE_PATH, 'utf-8'))
-        meetings = (calendarData.today || []).map((m: any, i: number) => ({
-          id: `meeting-${i}`,
-          title: m.title,
-          time: m.time,
-          attendees: m.attendees
-        }))
+        const now = new Date()
+        const currentHour = now.getHours()
+        const currentMinute = now.getMinutes()
+
+        meetings = (calendarData.today || [])
+          .map((m: any, i: number) => {
+            // Parse time like "7:00 AM" or "2:30 PM"
+            const timeMatch = m.time.match(/(\d+):(\d+)\s*(AM|PM)/i)
+            if (timeMatch) {
+              let hour = parseInt(timeMatch[1])
+              const minute = parseInt(timeMatch[2])
+              const isPM = timeMatch[3].toUpperCase() === 'PM'
+              if (isPM && hour !== 12) hour += 12
+              if (!isPM && hour === 12) hour = 0
+              return { ...m, _hour: hour, _minute: minute, id: `meeting-${i}` }
+            }
+            return { ...m, _hour: 0, _minute: 0, id: `meeting-${i}` }
+          })
+          .filter((m: any) => {
+            // Keep meetings that haven't started yet
+            return m._hour > currentHour || (m._hour === currentHour && m._minute > currentMinute)
+          })
+          .map((m: any) => ({
+            id: m.id,
+            title: m.title,
+            time: m.time,
+            attendees: m.attendees
+          }))
       }
 
       // Read tasks from tasks cache
