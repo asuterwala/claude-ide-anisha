@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react'
 
-interface Session {
+interface ClaudeSession {
+  id: string
+  title: string
   projectPath: string
-  branch: string | null
-  lastOpened: number
+  timestamp: number
 }
 
 export function RecentSessions() {
-  const [sessions, setSessions] = useState<Session[]>([])
+  const [sessions, setSessions] = useState<ClaudeSession[]>([])
 
   useEffect(() => {
-    window.api.getRecentSessions().then(setSessions)
+    // Fetch Claude Code sessions from IPC
+    window.api.getClaudeSessions?.().then(setSessions).catch(() => setSessions([]))
   }, [])
 
   const formatTimeAgo = (timestamp: number): string => {
@@ -24,8 +26,9 @@ export function RecentSessions() {
     return `${days}d ago`
   }
 
-  const getProjectName = (path: string): string => {
-    return path.split('/').pop() || path
+  const handleClick = (session: ClaudeSession) => {
+    // Open terminal and resume session
+    window.api.resumeClaudeSession?.(session.id, session.projectPath)
   }
 
   if (sessions.length === 0) {
@@ -42,30 +45,39 @@ export function RecentSessions() {
   return (
     <div style={panelStyle}>
       <h3 style={headerStyle}>Recent Sessions</h3>
-      {sessions.slice(0, 5).map((session, i) => (
+      {sessions.slice(0, 5).map((session) => (
         <div
-          key={i}
+          key={session.id}
+          onClick={() => handleClick(session)}
           style={{
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'center',
-            padding: '8px 0',
-            borderBottom: i < Math.min(sessions.length, 5) - 1 ? '1px solid var(--border-color)' : 'none'
+            alignItems: 'flex-start',
+            padding: '10px 8px',
+            marginBottom: 4,
+            borderRadius: 6,
+            cursor: 'pointer',
+            transition: 'background 0.15s'
           }}
+          onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 14 }}>📁</span>
-            <div>
-              <div style={{ color: 'var(--text-primary)', fontSize: 13, fontWeight: 500 }}>
-                {getProjectName(session.projectPath)}
-              </div>
-              <div style={{ color: 'var(--text-muted)', fontSize: 11 }}>
-                {session.projectPath}
-              </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{
+              color: 'var(--text-primary)',
+              fontSize: 13,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
+            }}>
+              {session.title}
+            </div>
+            <div style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 2 }}>
+              {session.projectPath.split('/').pop()}
             </div>
           </div>
-          <div style={{ color: 'var(--text-muted)', fontSize: 11 }}>
-            {formatTimeAgo(session.lastOpened)}
+          <div style={{ color: 'var(--text-muted)', fontSize: 11, marginLeft: 12, flexShrink: 0 }}>
+            {formatTimeAgo(session.timestamp)}
           </div>
         </div>
       ))}

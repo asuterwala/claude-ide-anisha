@@ -340,6 +340,71 @@ export function registerIpcHandlers(): void {
     }
   })
 
+  // Claude Code sessions
+  const CLAUDE_PROJECTS_PATH = join(homedir(), '.claude', 'projects')
+
+  ipcMain.handle('claudeSessions:list', async () => {
+    try {
+      const sessions: any[] = []
+      const projectDirs = readdirSync(CLAUDE_PROJECTS_PATH).filter(d => d.startsWith('-'))
+
+      for (const projectDir of projectDirs) {
+        const projectPath = join(CLAUDE_PROJECTS_PATH, projectDir)
+        const files = readdirSync(projectPath)
+          .filter(f => f.endsWith('.jsonl'))
+          .map(f => ({
+            name: f,
+            path: join(projectPath, f),
+            mtime: statSync(join(projectPath, f)).mtimeMs
+          }))
+          .sort((a, b) => b.mtime - a.mtime)
+          .slice(0, 10)
+
+        for (const file of files) {
+          try {
+            const content = readFileSync(file.path, 'utf-8')
+            const lines = content.split('\n').slice(0, 30)
+            let title = ''
+
+            for (const line of lines) {
+              if (!line.trim()) continue
+              try {
+                const entry = JSON.parse(line)
+                if (entry.type === 'user' && entry.message?.content) {
+                  title = entry.message.content.slice(0, 80)
+                  break
+                }
+              } catch {}
+            }
+
+            if (title) {
+              // Convert project dir back to path
+              const actualPath = '/' + projectDir.slice(1).replace(/-/g, '/')
+              sessions.push({
+                id: file.name.replace('.jsonl', ''),
+                title,
+                projectPath: actualPath,
+                timestamp: file.mtime
+              })
+            }
+          } catch {}
+        }
+      }
+
+      return sessions.sort((a, b) => b.timestamp - a.timestamp).slice(0, 10)
+    } catch (error) {
+      console.error('Failed to list Claude sessions:', error)
+      return []
+    }
+  })
+
+  ipcMain.handle('claudeSessions:resume', async (event, sessionId: string, projectPath: string) => {
+    // This would open a new terminal tab with `claude --resume sessionId`
+    // For now, just log - the actual implementation would need terminal integration
+    console.log('Resume session:', sessionId, 'in', projectPath)
+    return { success: true }
+  })
+
   // Config loading
   ipcMain.handle('config:load', async () => {
     try {

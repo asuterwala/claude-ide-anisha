@@ -49,6 +49,8 @@ const api = {
   loadTimeSaved: () => ipcRenderer.invoke('timeSaved:load'),
   saveTimeSaved: (data: unknown) => ipcRenderer.invoke('timeSaved:save', data),
   showNotification: (title: string, body: string) => ipcRenderer.invoke('notify:show', title, body),
+  getClaudeSessions: () => ipcRenderer.invoke('claudeSessions:list'),
+  resumeClaudeSession: (sessionId: string, projectPath: string) => ipcRenderer.invoke('claudeSessions:resume', sessionId, projectPath),
 }
 
 contextBridge.exposeInMainWorld('api', api)
