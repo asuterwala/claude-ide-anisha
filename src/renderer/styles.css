@@ -1,3 +1,5 @@
+@import './styles/theme.css';
+
 * {
   margin: 0;
   padding: 0;
@@ -7,8 +9,8 @@
 body {
   font-family: 'SF Mono', 'Menlo', 'Consolas', 'Liberation Mono', monospace;
   font-size: 13px;
-  background: #1e1e1e;
-  color: #cccccc;
+  background: var(--bg-primary);
+  color: var(--text-primary);
   overflow: hidden;
   -webkit-user-select: none;
   user-select: none;

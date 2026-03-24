@@ -1,0 +1,37 @@
+:root {
+  /* Backgrounds */
+  --bg-primary: #F8F9FA;
+  --bg-secondary: #FFFFFF;
+  --bg-tertiary: #EDF2F7;
+  --bg-code: #EDF2F7;
+
+  /* Borders */
+  --border-color: #E2E8F0;
+  --border-light: #F0F4F8;
+
+  /* Text */
+  --text-primary: #2D3748;
+  --text-secondary: #718096;
+  --text-muted: #A0AEC0;
+
+  /* Accents */
+  --accent-primary: #5B8DEF;
+  --accent-primary-hover: #4A7DD9;
+  --accent-success: #68D391;
+  --accent-warning: #F6AD55;
+  --accent-error: #FC8181;
+
+  /* Panels */
+  --panel-bg: #FFFFFF;
+  --panel-border: #E2E8F0;
+  --panel-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+
+  /* Interactive */
+  --hover-bg: #F0F4F8;
+  --active-bg: #E2E8F0;
+
+  /* Terminal */
+  --terminal-bg: #FFFFFF;
+  --terminal-text: #2D3748;
+  --terminal-cursor: #5B8DEF;
+}
