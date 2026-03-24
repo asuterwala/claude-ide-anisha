@@ -1,6 +1,8 @@
 import { ipcMain, dialog, app, BrowserWindow, net, session } from 'electron'
 import { readdir, readFile, writeFile, stat } from 'fs/promises'
+import { readFileSync, existsSync, writeFileSync, mkdirSync } from 'fs'
 import { join, relative } from 'path'
+import { homedir } from 'os'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
 
@@ -13,6 +15,17 @@ import type { FileNode, RecentSession } from '../shared/types'
 const sessionsFile = () => join(app.getPath('userData'), 'recent-sessions.json')
 const teamStatsConfigFile = () => join(app.getPath('userData'), 'team-stats-config.json')
 const anonIdFile = () => join(app.getPath('userData'), 'anon-id.json')
+const CONFIG_PATH = join(homedir(), '.config', 'claude-ide-mc', 'config.json')
+
+const DEFAULT_CONFIG = {
+  user: { name: '', slackSignature: '_Sent by Claude Code_ :claude:' },
+  notion: { enabled: true, dashboardId: '', refreshIntervalMinutes: 30 },
+  streamlit: { enabled: true, defaultPort: 8501, keepRunningOnClose: false },
+  notifications: { enabled: true, quietHoursStart: null, quietHoursEnd: null },
+  slack: { enabled: true, draftVoice: 'direct, concise, collaborative', quickRecipients: [] },
+  skills: { categories: [], timeSavedWeights: {} },
+  theme: 'light'
+}
 
 async function getOrCreateAnonId(): Promise<string> {
   try {
@@ -322,6 +335,25 @@ export function registerIpcHandlers(): void {
       return stdout.trim()
     } catch (err: any) {
       throw new Error(`Claude inline edit failed: ${err.message}`)
+    }
+  })
+
+  // Config loading
+  ipcMain.handle('config:load', async () => {
+    try {
+      if (!existsSync(CONFIG_PATH)) {
+        const dir = join(homedir(), '.config', 'claude-ide-mc')
+        if (!existsSync(dir)) {
+          mkdirSync(dir, { recursive: true })
+        }
+        writeFileSync(CONFIG_PATH, JSON.stringify(DEFAULT_CONFIG, null, 2))
+        return DEFAULT_CONFIG
+      }
+      const content = readFileSync(CONFIG_PATH, 'utf-8')
+      return { ...DEFAULT_CONFIG, ...JSON.parse(content) }
+    } catch (error) {
+      console.error('Failed to load config:', error)
+      return DEFAULT_CONFIG
     }
   })
 }
