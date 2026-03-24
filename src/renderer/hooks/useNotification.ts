@@ -8,6 +8,7 @@ export function useNotification() {
   const config = useConfig()
   const lastOutputRef = useRef<string>('')
   const silenceUntilRef = useRef<number>(0)
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   const checkAndNotify = useCallback((terminalOutput: string) => {
     if (!config?.notifications.enabled) return
@@ -31,6 +32,12 @@ export function useNotification() {
     if (lastLine === lastOutputRef.current) return
     lastOutputRef.current = lastLine
 
+    // Clear any pending timer (output is still changing)
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current)
+      debounceTimerRef.current = null
+    }
+
     // Check waiting conditions
     const isWaiting = (
       !lastLine.endsWith('$') &&
@@ -46,14 +53,16 @@ export function useNotification() {
     )
 
     if (isWaiting) {
-      const questionPreview = lastLine.slice(0, 50) + (lastLine.length > 50 ? '...' : '')
-      window.api.showNotification('Claude Code', `Waiting for your response: ${questionPreview}`)
+      // Wait 2 seconds of no new output before notifying
+      debounceTimerRef.current = setTimeout(() => {
+        const questionPreview = lastLine.slice(0, 50) + (lastLine.length > 50 ? '...' : '')
+        window.api.showNotification('Claude Code', `Waiting for your response: ${questionPreview}`)
 
-      // Silence for 30 seconds to avoid spam
-      silenceUntilRef.current = Date.now() + 30000
-      dispatch({ type: 'NOTIFICATIONS_TOGGLE', payload: true })
+        // Silence for 30 seconds to avoid spam
+        silenceUntilRef.current = Date.now() + 30000
+      }, 2000)
     }
-  }, [config, state.notifications.enabled, dispatch])
+  }, [config, state.notifications.enabled])
 
   return { checkAndNotify }
 }

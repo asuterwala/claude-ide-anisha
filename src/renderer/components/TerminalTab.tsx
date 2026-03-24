@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
+import { useNotification } from '../hooks/useNotification'
 
 interface Props {
   ptyId: string
@@ -12,6 +13,8 @@ export default function TerminalTab({ ptyId, visible }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const terminalRef = useRef<Terminal | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
+  const terminalBufferRef = useRef<string>('')
+  const { checkAndNotify } = useNotification()
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -60,6 +63,13 @@ export default function TerminalTab({ ptyId, visible }: Props) {
     const unsubData = window.api.onPtyData((id, data) => {
       if (id === ptyId) {
         terminal.write(data)
+        // Accumulate terminal output for notification checking
+        terminalBufferRef.current += data
+        // Keep buffer reasonable size (last 10KB of output)
+        if (terminalBufferRef.current.length > 10000) {
+          terminalBufferRef.current = terminalBufferRef.current.slice(-10000)
+        }
+        checkAndNotify(terminalBufferRef.current)
       }
     })
 
@@ -79,7 +89,7 @@ export default function TerminalTab({ ptyId, visible }: Props) {
       unsubData()
       terminal.dispose()
     }
-  }, [ptyId])
+  }, [ptyId, checkAndNotify])
 
   useEffect(() => {
     if (visible && fitAddonRef.current) {
