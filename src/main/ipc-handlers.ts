@@ -359,14 +359,40 @@ export function registerIpcHandlers(): void {
     }
   })
 
-  // Notion data fetching
-  ipcMain.handle('notion:fetch', async (_event, dashboardId: string) => {
-    // Placeholder - returns empty data structure
-    // Real implementation would call Claude CLI with MCP
-    return {
-      meetings: [],
-      tasks: [],
-      error: null
+  // Data fetching from cache files (populated by Claude CLI / MCP)
+  const CALENDAR_CACHE_PATH = join(homedir(), '.memory', 'mission-control', 'calendar-cache.json')
+  const TASKS_CACHE_PATH = join(homedir(), '.memory', 'mission-control', 'tasks-cache.json')
+
+  ipcMain.handle('notion:fetch', async (_event, _dashboardId: string) => {
+    try {
+      // Read meetings from calendar cache
+      let meetings: any[] = []
+      if (existsSync(CALENDAR_CACHE_PATH)) {
+        const calendarData = JSON.parse(readFileSync(CALENDAR_CACHE_PATH, 'utf-8'))
+        meetings = (calendarData.today || []).map((m: any, i: number) => ({
+          id: `meeting-${i}`,
+          title: m.title,
+          time: m.time,
+          attendees: m.attendees
+        }))
+      }
+
+      // Read tasks from tasks cache
+      let tasks: any[] = []
+      if (existsSync(TASKS_CACHE_PATH)) {
+        const tasksData = JSON.parse(readFileSync(TASKS_CACHE_PATH, 'utf-8'))
+        tasks = (tasksData.tasks || []).map((t: any) => ({
+          id: t.id,
+          title: t.title,
+          status: t.status,
+          dueDate: t.dueDate
+        }))
+      }
+
+      return { meetings, tasks, error: null }
+    } catch (error) {
+      console.error('Failed to fetch data:', error)
+      return { meetings: [], tasks: [], error: 'Failed to load data from cache' }
     }
   })
 

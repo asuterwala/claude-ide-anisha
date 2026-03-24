@@ -83,8 +83,8 @@ export function NotionPanel() {
         ) : (
           displayMeetings.map(m => (
             <div key={m.id} style={{ display: 'flex', gap: 8, fontSize: 13, padding: '4px 0' }}>
-              <span style={{ color: 'var(--text-secondary)', minWidth: 60 }}>
-                {new Date(m.time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+              <span style={{ color: 'var(--text-secondary)', minWidth: 70 }}>
+                {m.time}
               </span>
               <span style={{ color: 'var(--text-primary)' }}>{m.title}</span>
             </div>
