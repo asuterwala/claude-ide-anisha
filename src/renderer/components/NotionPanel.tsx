@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useRef } from 'react'
+import { useEffect, useCallback, useRef, useState } from 'react'
 import { useAppState } from '../store'
 import { useConfig } from '../hooks/useConfig'
 
@@ -22,7 +22,8 @@ export function NotionPanel() {
   const { state, dispatch } = useAppState()
   const config = useConfig()
   const { meetings, tasks, loading, error, lastFetched } = state.notion
-  const cacheRef = useRef<{ meetings: typeof meetings; tasks: typeof tasks } | null>(null)
+  const cacheRef = useRef<{ meetings: typeof meetings; tasks: typeof tasks; hadMeetingsToday?: boolean } | null>(null)
+  const [hadMeetingsToday, setHadMeetingsToday] = useState(false)
 
   const fetchData = useCallback(async () => {
     if (!config?.notion.enabled || !config.notion.dashboardId) return
@@ -32,7 +33,8 @@ export function NotionPanel() {
       if (data.error) {
         dispatch({ type: 'NOTION_ERROR', payload: data.error })
       } else {
-        cacheRef.current = { meetings: data.meetings, tasks: data.tasks }
+        cacheRef.current = { meetings: data.meetings, tasks: data.tasks, hadMeetingsToday: data.hadMeetingsToday }
+        setHadMeetingsToday(data.hadMeetingsToday || false)
         dispatch({ type: 'NOTION_LOADED', payload: data })
       }
     } catch (err) {
@@ -79,7 +81,9 @@ export function NotionPanel() {
           Meetings Today
         </div>
         {displayMeetings.length === 0 ? (
-          <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>No meetings today</div>
+          <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>
+            {hadMeetingsToday ? 'No more meetings today' : 'No meetings today'}
+          </div>
         ) : (
           displayMeetings.map(m => (
             <div key={m.id} style={{ display: 'flex', gap: 8, fontSize: 13, padding: '4px 0' }}>

@@ -367,13 +367,17 @@ export function registerIpcHandlers(): void {
     try {
       // Read meetings from calendar cache, filter to upcoming only
       let meetings: any[] = []
+      let hadMeetingsToday = false
       if (existsSync(CALENDAR_CACHE_PATH)) {
         const calendarData = JSON.parse(readFileSync(CALENDAR_CACHE_PATH, 'utf-8'))
+        const allMeetings = calendarData.today || []
+        hadMeetingsToday = allMeetings.length > 0
+
         const now = new Date()
         const currentHour = now.getHours()
         const currentMinute = now.getMinutes()
 
-        meetings = (calendarData.today || [])
+        meetings = allMeetings
           .map((m: any, i: number) => {
             // Parse time like "7:00 AM" or "2:30 PM"
             const timeMatch = m.time.match(/(\d+):(\d+)\s*(AM|PM)/i)
@@ -411,7 +415,7 @@ export function registerIpcHandlers(): void {
         }))
       }
 
-      return { meetings, tasks, error: null }
+      return { meetings, tasks, hadMeetingsToday, error: null }
     } catch (error) {
       console.error('Failed to fetch data:', error)
       return { meetings: [], tasks: [], error: 'Failed to load data from cache' }
