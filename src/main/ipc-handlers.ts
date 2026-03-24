@@ -1,4 +1,4 @@
-import { ipcMain, dialog, app, BrowserWindow, net, session } from 'electron'
+import { ipcMain, dialog, app, BrowserWindow, net, session, Notification } from 'electron'
 import { readdir, readFile, writeFile, stat } from 'fs/promises'
 import { readFileSync, existsSync, writeFileSync, mkdirSync, readdirSync, statSync } from 'fs'
 import { join, relative } from 'path'
@@ -448,5 +448,29 @@ export function registerIpcHandlers(): void {
       writeFileSync(TIME_SAVED_PATH, JSON.stringify(data, null, 2))
       return { success: true }
     } catch (error) { return { success: false, error: String(error) } }
+  })
+
+  ipcMain.handle('notify:show', async (_event, title: string, body: string) => {
+    const win = BrowserWindow.getFocusedWindow()
+    if (win && win.isFocused()) {
+      // Don't notify if window is focused
+      return { shown: false, reason: 'window-focused' }
+    }
+
+    const notification = new Notification({
+      title,
+      body,
+      silent: false
+    })
+
+    notification.on('click', () => {
+      const windows = BrowserWindow.getAllWindows()
+      if (windows.length > 0) {
+        windows[0].focus()
+      }
+    })
+
+    notification.show()
+    return { shown: true }
   })
 }

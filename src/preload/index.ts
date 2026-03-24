@@ -48,7 +48,7 @@ const api = {
   sendSlack: (channelId: string, message: string) => ipcRenderer.invoke('slack:send', channelId, message),
   loadTimeSaved: () => ipcRenderer.invoke('timeSaved:load'),
   saveTimeSaved: (data: unknown) => ipcRenderer.invoke('timeSaved:save', data),
-  showNotification: (title: string, body: string) => ipcRenderer.invoke('notification:show', title, body),
+  showNotification: (title: string, body: string) => ipcRenderer.invoke('notify:show', title, body),
 }
 
 contextBridge.exposeInMainWorld('api', api)
