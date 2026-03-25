@@ -1,25 +1,28 @@
-import { useConfig } from '../hooks/useConfig'
+import { useState, useEffect } from 'react'
 import { useAppState } from '../store'
 
 export function SkillsLauncher() {
-  const config = useConfig()
   const { state, dispatch } = useAppState()
+  const [skills, setSkills] = useState<Array<{ name: string; description: string }>>([])
 
-  const executeSkill = (cmd: string) => {
+  useEffect(() => {
+    window.api.listSkills().then(setSkills)
+  }, [])
+
+  const executeSkill = (skillName: string) => {
+    const cmd = `/${skillName}`
     const terminalTab = state.tabs.find(t => t.type === 'terminal')
     if (terminalTab) {
       dispatch({ type: 'SET_ACTIVE_TAB', tabId: terminalTab.id })
       window.api.sendToTerminal(terminalTab.ptyId, cmd + '\n')
-      const weight = config?.skills.timeSavedWeights[cmd] || 10
-      dispatch({ type: 'TIME_SAVED_ADD', payload: { action: cmd, minutes: weight } })
     }
   }
 
-  if (!config?.skills.categories.length) {
+  if (skills.length === 0) {
     return (
       <div style={panelStyle}>
         <h3 style={headerStyle}>Skills</h3>
-        <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>No skills configured. Add skills in config.json.</div>
+        <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>No skills found in ~/.claude/skills/</div>
       </div>
     )
   }
@@ -27,17 +30,21 @@ export function SkillsLauncher() {
   return (
     <div style={panelStyle}>
       <h3 style={headerStyle}>Skills</h3>
-      {config.skills.categories.map(cat => (
-        <div key={cat.label} style={{ marginBottom: 12 }}>
-          <div style={{ color: 'var(--text-secondary)', fontSize: 11, marginBottom: 6, textTransform: 'uppercase' }}>{cat.label}</div>
-          {cat.skills.map(skill => (
-            <div key={skill.cmd} onClick={() => executeSkill(skill.cmd)} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-              <code style={{ color: 'var(--accent-primary)' }}>{skill.cmd}</code>
-              <span style={{ color: 'var(--text-secondary)' }}>{skill.desc}</span>
-            </div>
-          ))}
+      {skills.map(skill => (
+        <div key={skill.name} onClick={() => executeSkill(skill.name)} style={{
+          display: 'grid',
+          gridTemplateColumns: '120px 1fr',
+          gap: 24,
+          padding: '8px',
+          borderRadius: 4,
+          cursor: 'pointer',
+          fontSize: 12,
+          alignItems: 'start'
+        }}
+          onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+          <code style={{ color: 'var(--accent-primary)', lineHeight: 1.4 }}>/{skill.name}</code>
+          <span style={{ color: 'var(--text-secondary)', lineHeight: 1.4 }}>{skill.description}</span>
         </div>
       ))}
     </div>

@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 
 const api = {
   readDir: (dirPath: string) => ipcRenderer.invoke('fs:readDir', dirPath),
@@ -6,7 +6,7 @@ const api = {
   writeFile: (filePath: string, content: string) => ipcRenderer.invoke('fs:writeFile', filePath, content),
   getGitStatus: (projectPath: string) => ipcRenderer.invoke('git:status', projectPath),
   getGitBranch: (projectPath: string) => ipcRenderer.invoke('git:branch', projectPath),
-  createPty: (projectPath: string) => ipcRenderer.invoke('pty:create', projectPath),
+  createPty: (projectPath: string | null) => ipcRenderer.invoke('pty:create', projectPath),
   writePty: (id: string, data: string) => ipcRenderer.send('pty:write', id, data),
   resizePty: (id: string, cols: number, rows: number) => ipcRenderer.send('pty:resize', id, cols, rows),
   destroyPty: (id: string) => ipcRenderer.send('pty:destroy', id),
@@ -40,6 +40,7 @@ const api = {
   googleLogin: (): Promise<boolean> => ipcRenderer.invoke('stats:googleLogin'),
   loadConfig: () => ipcRenderer.invoke('config:load'),
   fetchNotion: (dashboardId: string) => ipcRenderer.invoke('notion:fetch', dashboardId),
+  refreshCalendar: () => ipcRenderer.invoke('calendar:refresh'),
   listPythonFiles: (path: string) => ipcRenderer.invoke('streamlit:list', path),
   runStreamlit: (file: string, port: number) => ipcRenderer.invoke('streamlit:run', file, port),
   stopStreamlit: (file: string) => ipcRenderer.invoke('streamlit:stop', file),
@@ -49,8 +50,11 @@ const api = {
   loadTimeSaved: () => ipcRenderer.invoke('timeSaved:load'),
   saveTimeSaved: (data: unknown) => ipcRenderer.invoke('timeSaved:save', data),
   showNotification: (title: string, body: string) => ipcRenderer.invoke('notify:show', title, body),
-  getClaudeSessions: () => ipcRenderer.invoke('claudeSessions:list'),
+  getClaudeSessions: (limit?: number) => ipcRenderer.invoke('claudeSessions:list', limit || 10),
   resumeClaudeSession: (sessionId: string, projectPath: string) => ipcRenderer.invoke('claudeSessions:resume', sessionId, projectPath),
+  generateSessionSummaries: (sessionIds: string[]): Promise<Record<string, string>> => ipcRenderer.invoke('claudeSessions:generateSummaries', sessionIds),
+  getPathForFile: (file: File): string => webUtils.getPathForFile(file),
+  listSkills: (): Promise<Array<{ name: string; description: string }>> => ipcRenderer.invoke('skills:list'),
 }
 
 contextBridge.exposeInMainWorld('api', api)

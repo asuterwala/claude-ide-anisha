@@ -24,6 +24,7 @@ export function NotionPanel() {
   const { meetings, tasks, loading, error, lastFetched } = state.notion
   const cacheRef = useRef<{ meetings: typeof meetings; tasks: typeof tasks; hadMeetingsToday?: boolean } | null>(null)
   const [hadMeetingsToday, setHadMeetingsToday] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
 
   const fetchData = useCallback(async () => {
     if (!config?.notion.enabled || !config.notion.dashboardId) return
@@ -42,11 +43,35 @@ export function NotionPanel() {
     }
   }, [config, dispatch])
 
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true)
+    try {
+      await window.api.refreshCalendar()
+      await fetchData()
+    } finally {
+      setRefreshing(false)
+    }
+  }, [fetchData])
+
+  const fetchDataRef = useRef(fetchData)
+  fetchDataRef.current = fetchData
+
+  // Initial fetch when config becomes available
   useEffect(() => {
-    fetchData()
-    const interval = setInterval(fetchData, (config?.notion.refreshIntervalMinutes || 30) * 60 * 1000)
+    if (config?.notion.enabled && config.notion.dashboardId) {
+      fetchData()
+    }
+  }, [config?.notion.enabled, config?.notion.dashboardId])
+
+  // Separate interval effect - stable, doesn't recreate on fetchData changes
+  useEffect(() => {
+    if (!config?.notion.enabled) return
+    const intervalMs = (config?.notion.refreshIntervalMinutes || 30) * 60 * 1000
+    const interval = setInterval(() => {
+      fetchDataRef.current()
+    }, intervalMs)
     return () => clearInterval(interval)
-  }, [fetchData, config])
+  }, [config?.notion.enabled, config?.notion.refreshIntervalMinutes])
 
   const displayMeetings = error && cacheRef.current ? cacheRef.current.meetings : meetings
   const displayTasks = error && cacheRef.current ? cacheRef.current.tasks : tasks
@@ -63,10 +88,24 @@ export function NotionPanel() {
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <h3 style={{ margin: 0, color: 'var(--text-primary)', fontSize: 14, fontWeight: 600 }}>Notion</h3>
-        <button onClick={fetchData} disabled={loading} style={{
-          background: 'none', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', fontSize: 12
-        }}>
-          {loading ? 'Loading...' : 'Refresh'}
+        <button
+          onClick={handleRefresh}
+          disabled={loading || refreshing}
+          title="Refresh calendar"
+          style={{
+            background: 'none',
+            border: 'none',
+            padding: 4,
+            fontSize: 16,
+            cursor: (loading || refreshing) ? 'default' : 'pointer',
+            opacity: (loading || refreshing) ? 0.4 : 0.7,
+            transition: 'opacity 0.2s, transform 0.3s',
+            transform: refreshing ? 'rotate(360deg)' : 'none',
+          }}
+          onMouseEnter={e => { if (!loading && !refreshing) e.currentTarget.style.opacity = '1' }}
+          onMouseLeave={e => { if (!loading && !refreshing) e.currentTarget.style.opacity = '0.7' }}
+        >
+          ↻
         </button>
       </div>
 

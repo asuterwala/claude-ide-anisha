@@ -1,15 +1,26 @@
 // src/renderer/components/Dashboard.tsx
 import { useConfig } from '../hooks/useConfig'
+import { useAppState } from '../store'
 import { NotionPanel } from './NotionPanel'
 import { ModelStatus } from './ModelStatus'
 import { RecentSessions } from './RecentSessions'
 import { SkillsLauncher } from './SkillsLauncher'
-import { QuickSlack } from './QuickSlack'
 import { TipsPanel } from './TipsPanel'
-import { TimeSaved } from './TimeSaved'
 
 export default function Dashboard({ visible }: { visible: boolean }) {
   const config = useConfig()
+  const { state, dispatch } = useAppState()
+
+  const handleOpenProject = async () => {
+    const dir = await window.api.selectDirectory()
+    if (dir) {
+      dispatch({ type: 'SET_PROJECT_PATH', path: dir })
+      await window.api.watchProject(dir)
+      await window.api.addRecentSession(dir)
+      const branch = await window.api.getGitBranch(dir)
+      dispatch({ type: 'SET_GIT_BRANCH', branch })
+    }
+  }
 
   if (!visible) return null
 
@@ -30,7 +41,23 @@ export default function Dashboard({ visible }: { visible: boolean }) {
             Let's keep building.
           </p>
         </div>
-        <TimeSaved />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button
+            onClick={handleOpenProject}
+            style={{
+              background: state.projectPath ? 'var(--bg-secondary)' : 'var(--accent-primary)',
+              color: state.projectPath ? 'var(--text-primary)' : 'white',
+              border: 'none',
+              borderRadius: 6,
+              padding: '8px 16px',
+              fontSize: 13,
+              fontWeight: 500,
+              cursor: 'pointer',
+            }}
+          >
+            {state.projectPath ? 'Change Project' : 'Open Project'}
+          </button>
+        </div>
       </div>
 
       {/* Main grid layout */}
@@ -43,14 +70,13 @@ export default function Dashboard({ visible }: { visible: boolean }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <NotionPanel />
           <ModelStatus />
-          <RecentSessions />
           <TipsPanel />
         </div>
 
         {/* Right column */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <SkillsLauncher />
-          <QuickSlack />
+          <RecentSessions />
         </div>
       </div>
     </div>

@@ -342,10 +342,83 @@ export function registerIpcHandlers(): void {
 
   // Claude Code sessions
   const CLAUDE_PROJECTS_PATH = join(homedir(), '.claude', 'projects')
+  const SESSION_SUMMARIES_CACHE = join(homedir(), '.cache', 'claude-ide', 'session-summaries.json')
 
-  ipcMain.handle('claudeSessions:list', async () => {
+  // Load cached summaries
+  function loadSummaryCache(): Record<string, string> {
+    try {
+      if (existsSync(SESSION_SUMMARIES_CACHE)) {
+        return JSON.parse(readFileSync(SESSION_SUMMARIES_CACHE, 'utf-8'))
+      }
+    } catch {}
+    return {}
+  }
+
+  // Save summaries cache
+  function saveSummaryCache(cache: Record<string, string>) {
+    try {
+      const dir = join(homedir(), '.cache', 'claude-ide')
+      if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
+      writeFileSync(SESSION_SUMMARIES_CACHE, JSON.stringify(cache, null, 2))
+    } catch (err) {
+      console.error('Failed to save summary cache:', err)
+    }
+  }
+
+  // Generate summary for a session using Claude CLI
+  async function generateSessionSummary(sessionPath: string): Promise<string> {
+    try {
+      const content = readFileSync(sessionPath, 'utf-8')
+      const lines = content.split('\n').slice(0, 100) // Read more lines for better context
+      const messages: string[] = []
+
+      for (const line of lines) {
+        if (!line.trim()) continue
+        try {
+          const entry = JSON.parse(line)
+          // User messages - handle both string and {role, content} formats
+          if (entry.type === 'user' && entry.message) {
+            const msgText = typeof entry.message === 'string'
+              ? entry.message
+              : entry.message.content
+            if (msgText) messages.push(`User: ${msgText.slice(0, 200)}`)
+          } else if (entry.type === 'assistant' && Array.isArray(entry.message)) {
+            // Assistant messages are arrays with text blocks
+            const text = entry.message
+              .filter((c: any) => c.type === 'text')
+              .map((c: any) => c.text || '')
+              .join('')
+            if (text) messages.push(`Assistant: ${text.slice(0, 200)}`)
+          }
+        } catch {}
+      }
+
+      if (messages.length === 0) return ''
+
+      const claudePath = '/opt/homebrew/bin/claude'
+      const prompt = `In 5-8 words, what was this session about? Just the topic, no prefix:\n${messages.slice(0, 5).join('\n').slice(0, 500)}`
+
+      const { stdout } = await execFileAsync(claudePath, ['-p', prompt], {
+        timeout: 15000,
+        maxBuffer: 512 * 1024,
+        env: {
+          ...process.env,
+          CLAUDE_CODE_USE_BEDROCK: 'true',
+          AWS_PROFILE: 'bedrock-users',
+          AWS_REGION: 'us-west-2'
+        }
+      })
+      return stdout.trim().slice(0, 60)
+    } catch (err) {
+      console.error('Failed to generate summary:', err)
+      return ''
+    }
+  }
+
+  ipcMain.handle('claudeSessions:list', async (_event, limit: number = 10) => {
     try {
       const sessions: any[] = []
+      const summaryCache = loadSummaryCache()
       const projectDirs = readdirSync(CLAUDE_PROJECTS_PATH).filter(d => d.startsWith('-'))
 
       for (const projectDir of projectDirs) {
@@ -358,32 +431,61 @@ export function registerIpcHandlers(): void {
             mtime: statSync(join(projectPath, f)).mtimeMs
           }))
           .sort((a, b) => b.mtime - a.mtime)
-          .slice(0, 10)
+          .slice(0, 30)
 
         for (const file of files) {
           try {
+            const sessionId = file.name.replace('.jsonl', '')
             const content = readFileSync(file.path, 'utf-8')
-            const lines = content.split('\n').slice(0, 30)
-            let title = ''
+            const lines = content.split('\n').slice(0, 50)
 
+            // Use cached summary if available
+            let title = summaryCache[sessionId]
+            let cwd = ''
+
+            // Find cwd and first user message
             for (const line of lines) {
               if (!line.trim()) continue
               try {
                 const entry = JSON.parse(line)
-                if (entry.type === 'user' && entry.message?.content) {
-                  title = entry.message.content.slice(0, 80)
-                  break
+                // Get cwd from any entry that has it
+                if (entry.cwd && !cwd) {
+                  cwd = entry.cwd
                 }
+                // Get first user message as title
+                if (!title && entry.type === 'user' && entry.message) {
+                  if (typeof entry.message === 'string') {
+                    title = entry.message.slice(0, 60)
+                  } else if (entry.message.content) {
+                    const msgContent = typeof entry.message.content === 'string'
+                      ? entry.message.content
+                      : Array.isArray(entry.message.content) && entry.message.content[0]?.text
+                        ? entry.message.content[0].text
+                        : ''
+                    title = msgContent.slice(0, 60)
+                  }
+                }
+                if (title && cwd) break
               } catch {}
             }
 
-            if (title) {
-              // Convert project dir back to path
-              const actualPath = '/' + projectDir.slice(1).replace(/-/g, '/')
+            // Skip automated/programmatic sessions
+            const isAutomatedSession = title && (
+              title.startsWith('Summarize this') ||
+              title.startsWith('Say hello') ||
+              title.startsWith('In 5-8 words') ||
+              title.includes('MCP tool') ||
+              title.startsWith('Use the ') ||
+              title.startsWith('You are editing code') ||
+              title.startsWith('```') ||
+              /^(Get|Fetch|List|Update|Create|Delete|Write|Read)\s/i.test(title)
+            )
+            if (title && cwd && !isAutomatedSession) {
               sessions.push({
-                id: file.name.replace('.jsonl', ''),
+                id: sessionId,
                 title,
-                projectPath: actualPath,
+                projectPath: cwd,
+                projectDir,
                 timestamp: file.mtime
               })
             }
@@ -391,10 +493,36 @@ export function registerIpcHandlers(): void {
         }
       }
 
-      return sessions.sort((a, b) => b.timestamp - a.timestamp).slice(0, 10)
+      return sessions.sort((a, b) => b.timestamp - a.timestamp).slice(0, limit)
     } catch (error) {
       console.error('Failed to list Claude sessions:', error)
       return []
+    }
+  })
+
+  // Generate summaries for specific sessions
+  ipcMain.handle('claudeSessions:generateSummaries', async (_event, sessions: Array<{ id: string; projectDir: string }>) => {
+    try {
+      const summaryCache = loadSummaryCache()
+      const newSummaries: Record<string, string> = {}
+
+      for (const session of sessions) {
+        const filePath = join(CLAUDE_PROJECTS_PATH, session.projectDir, `${session.id}.jsonl`)
+        if (existsSync(filePath)) {
+          const summary = await generateSessionSummary(filePath)
+          if (summary) {
+            newSummaries[session.id] = summary
+          }
+        }
+      }
+
+      if (Object.keys(newSummaries).length > 0) {
+        saveSummaryCache({ ...summaryCache, ...newSummaries })
+      }
+      return newSummaries
+    } catch (error) {
+      console.error('Failed to generate summaries:', error)
+      return {}
     }
   })
 
@@ -427,6 +555,14 @@ export function registerIpcHandlers(): void {
   // Data fetching from cache files (populated by Claude CLI / MCP)
   const CALENDAR_CACHE_PATH = join(homedir(), '.memory', 'mission-control', 'calendar-cache.json')
   const TASKS_CACHE_PATH = join(homedir(), '.memory', 'mission-control', 'tasks-cache.json')
+
+  // Refresh calendar - just re-reads the cache file
+  // The cache is populated externally (by Claude Code sessions, cron jobs, etc.)
+  ipcMain.handle('calendar:refresh', async () => {
+    // Simply return success - the actual fetch will happen in notion:fetch
+    // This allows the UI to trigger a re-read of the cache
+    return { success: true }
+  })
 
   ipcMain.handle('notion:fetch', async (_event, _dashboardId: string) => {
     try {
@@ -565,6 +701,40 @@ export function registerIpcHandlers(): void {
       writeFileSync(TIME_SAVED_PATH, JSON.stringify(data, null, 2))
       return { success: true }
     } catch (error) { return { success: false, error: String(error) } }
+  })
+
+  // Skills auto-detect from ~/.claude/skills/
+  ipcMain.handle('skills:list', async () => {
+    const skillsDir = join(homedir(), '.claude', 'skills')
+    const skills: Array<{ name: string; description: string }> = []
+
+    if (!existsSync(skillsDir)) return skills
+
+    const entries = readdirSync(skillsDir, { withFileTypes: true })
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue
+      const skillPath = join(skillsDir, entry.name, 'SKILL.md')
+      if (!existsSync(skillPath)) continue
+
+      const content = readFileSync(skillPath, 'utf-8')
+      // Parse frontmatter
+      const match = content.match(/^---\n([\s\S]*?)\n---/)
+      if (!match) continue
+
+      const frontmatter = match[1]
+      const nameMatch = frontmatter.match(/^name:\s*(.+)$/m)
+      const descMatch = frontmatter.match(/^description:\s*(.+)$/m)
+
+      if (nameMatch) {
+        skills.push({
+          name: nameMatch[1].trim(),
+          description: descMatch ? descMatch[1].trim() : ''
+        })
+      }
+    }
+
+    // Sort alphabetically
+    return skills.sort((a, b) => a.name.localeCompare(b.name))
   })
 
   ipcMain.handle('notify:show', async (_event, title: string, body: string) => {
