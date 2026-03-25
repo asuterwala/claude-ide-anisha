@@ -17,9 +17,11 @@
   /* Accents */
   --accent-primary: #5B8DEF;
   --accent-primary-hover: #4A7DD9;
-  --accent-success: #68D391;
-  --accent-warning: #F6AD55;
+  --accent-success: #C2E5DF;
+  --accent-warning: #FFCAA4;
   --accent-error: #FC8181;
+  --accent-lavender: #F3D4F3;
+  --accent-pink: #FFD1D3;
 
   /* Panels */
   --panel-bg: #FFFFFF;

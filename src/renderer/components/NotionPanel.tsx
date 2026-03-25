@@ -21,10 +21,13 @@ async function fetchWithRetry<T>(fn: () => Promise<T>, maxAttempts = 3): Promise
 export function NotionPanel() {
   const { state, dispatch } = useAppState()
   const config = useConfig()
-  const { meetings, tasks, loading, error, lastFetched } = state.notion
+  const { meetings, tasks, loading, error } = state.notion
   const cacheRef = useRef<{ meetings: typeof meetings; tasks: typeof tasks; hadMeetingsToday?: boolean } | null>(null)
   const [hadMeetingsToday, setHadMeetingsToday] = useState(false)
-  const [refreshing, setRefreshing] = useState(false)
+  const [calendarRefreshing, setCalendarRefreshing] = useState(false)
+  const [tasksRefreshing, setTasksRefreshing] = useState(false)
+  const [calendarUpdated, setCalendarUpdated] = useState<Date | null>(null)
+  const [tasksUpdated, setTasksUpdated] = useState<Date | null>(null)
 
   const fetchData = useCallback(async () => {
     if (!config?.notion.enabled || !config.notion.dashboardId) return
@@ -37,21 +40,47 @@ export function NotionPanel() {
         cacheRef.current = { meetings: data.meetings, tasks: data.tasks, hadMeetingsToday: data.hadMeetingsToday }
         setHadMeetingsToday(data.hadMeetingsToday || false)
         dispatch({ type: 'NOTION_LOADED', payload: data })
+        const now = new Date()
+        setCalendarUpdated(now)
+        setTasksUpdated(now)
       }
     } catch (err) {
       dispatch({ type: 'NOTION_ERROR', payload: 'Failed to connect after 3 attempts' })
     }
   }, [config, dispatch])
 
-  const handleRefresh = useCallback(async () => {
-    setRefreshing(true)
+  const handleCalendarRefresh = useCallback(async () => {
+    setCalendarRefreshing(true)
     try {
       await window.api.refreshCalendar()
-      await fetchData()
+      // Re-fetch just to update the UI with new cache data
+      const data = await window.api.fetchNotion(config?.notion.dashboardId || '')
+      if (!data.error) {
+        cacheRef.current = { ...cacheRef.current, meetings: data.meetings, hadMeetingsToday: data.hadMeetingsToday }
+        setHadMeetingsToday(data.hadMeetingsToday || false)
+        dispatch({ type: 'NOTION_LOADED', payload: { ...state.notion, meetings: data.meetings } })
+        setCalendarUpdated(new Date())
+      }
     } finally {
-      setRefreshing(false)
+      setCalendarRefreshing(false)
     }
-  }, [fetchData])
+  }, [config, dispatch, state.notion])
+
+  const handleTasksRefresh = useCallback(async () => {
+    setTasksRefreshing(true)
+    try {
+      await window.api.refreshTasks()
+      // Re-fetch just to update the UI with new cache data
+      const data = await window.api.fetchNotion(config?.notion.dashboardId || '')
+      if (!data.error) {
+        cacheRef.current = { ...cacheRef.current, tasks: data.tasks }
+        dispatch({ type: 'NOTION_LOADED', payload: { ...state.notion, tasks: data.tasks } })
+        setTasksUpdated(new Date())
+      }
+    } finally {
+      setTasksRefreshing(false)
+    }
+  }, [config, dispatch, state.notion])
 
   const fetchDataRef = useRef(fetchData)
   fetchDataRef.current = fetchData
@@ -78,6 +107,28 @@ export function NotionPanel() {
 
   if (!config?.notion.enabled) return null
 
+  const RefreshButton = ({ onClick, refreshing, title }: { onClick: () => void; refreshing: boolean; title: string }) => (
+    <button
+      onClick={onClick}
+      disabled={loading || refreshing}
+      title={title}
+      style={{
+        background: 'none',
+        border: 'none',
+        padding: 2,
+        fontSize: 13,
+        cursor: (loading || refreshing) ? 'default' : 'pointer',
+        opacity: (loading || refreshing) ? 0.4 : 0.6,
+        transition: 'opacity 0.2s',
+        marginLeft: 6,
+      }}
+      onMouseEnter={e => { if (!loading && !refreshing) e.currentTarget.style.opacity = '1' }}
+      onMouseLeave={e => { if (!loading && !refreshing) e.currentTarget.style.opacity = '0.6' }}
+    >
+      {refreshing ? '...' : '↻'}
+    </button>
+  )
+
   return (
     <div style={{
       background: 'var(--panel-bg)',
@@ -86,28 +137,7 @@ export function NotionPanel() {
       border: '1px solid var(--panel-border)',
       boxShadow: 'var(--panel-shadow)'
     }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <h3 style={{ margin: 0, color: 'var(--text-primary)', fontSize: 14, fontWeight: 600 }}>Notion</h3>
-        <button
-          onClick={handleRefresh}
-          disabled={loading || refreshing}
-          title="Refresh calendar"
-          style={{
-            background: 'none',
-            border: 'none',
-            padding: 4,
-            fontSize: 16,
-            cursor: (loading || refreshing) ? 'default' : 'pointer',
-            opacity: (loading || refreshing) ? 0.4 : 0.7,
-            transition: 'opacity 0.2s, transform 0.3s',
-            transform: refreshing ? 'rotate(360deg)' : 'none',
-          }}
-          onMouseEnter={e => { if (!loading && !refreshing) e.currentTarget.style.opacity = '1' }}
-          onMouseLeave={e => { if (!loading && !refreshing) e.currentTarget.style.opacity = '0.7' }}
-        >
-          ↻
-        </button>
-      </div>
+      <h3 style={{ margin: '0 0 12px', color: 'var(--text-primary)', fontSize: 14, fontWeight: 600 }}>Today</h3>
 
       {error && (
         <div style={{ color: 'var(--accent-error)', fontSize: 12, marginBottom: 8 }}>
@@ -115,9 +145,13 @@ export function NotionPanel() {
         </div>
       )}
 
+      {/* Calendar Section */}
       <div style={{ marginBottom: 16 }}>
-        <div style={{ color: 'var(--text-secondary)', fontSize: 11, marginBottom: 8, textTransform: 'uppercase' }}>
-          Meetings Today
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+          <span style={{ color: 'var(--text-primary)', fontSize: 13, fontWeight: 600 }}>
+            Calendar
+          </span>
+          <RefreshButton onClick={handleCalendarRefresh} refreshing={calendarRefreshing} title="Refresh calendar from Google" />
         </div>
         {displayMeetings.length === 0 ? (
           <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>
@@ -125,7 +159,7 @@ export function NotionPanel() {
           </div>
         ) : (
           displayMeetings.map(m => (
-            <div key={m.id} style={{ display: 'flex', gap: 8, fontSize: 13, padding: '4px 0' }}>
+            <div key={m.id} style={{ display: 'flex', gap: 8, fontSize: 12, padding: '4px 0' }}>
               <span style={{ color: 'var(--text-secondary)', minWidth: 70 }}>
                 {m.time}
               </span>
@@ -133,29 +167,46 @@ export function NotionPanel() {
             </div>
           ))
         )}
+        {calendarUpdated && (
+          <div style={{ color: 'var(--text-muted)', fontSize: 10, marginTop: 4 }}>
+            Updated {calendarUpdated.toLocaleTimeString()}
+          </div>
+        )}
       </div>
 
+      {/* Tasks Section */}
       <div>
-        <div style={{ color: 'var(--text-secondary)', fontSize: 11, marginBottom: 8, textTransform: 'uppercase' }}>
-          Tasks ({displayTasks.filter(t => t.status !== 'Done').length} pending)
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+          <span style={{ color: 'var(--text-primary)', fontSize: 13, fontWeight: 600 }}>
+            Tasks
+          </span>
+          <RefreshButton onClick={handleTasksRefresh} refreshing={tasksRefreshing} title="Refresh tasks from Notion" />
         </div>
         {displayTasks.filter(t => t.status !== 'Done').length === 0 ? (
           <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>No pending tasks</div>
         ) : (
-          displayTasks.filter(t => t.status !== 'Done').map(t => (
-            <div key={t.id} style={{ display: 'flex', gap: 8, fontSize: 13, padding: '4px 0' }}>
-              <span style={{ color: 'var(--text-secondary)' }}>☐</span>
-              <span style={{ color: 'var(--text-primary)' }}>{t.title}</span>
-            </div>
-          ))
+          displayTasks
+            .filter(t => t.status !== 'Done')
+            .sort((a, b) => {
+              // Sort by due date ascending (closest due date first)
+              if (!a.dueDate && !b.dueDate) return 0
+              if (!a.dueDate) return 1
+              if (!b.dueDate) return -1
+              return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
+            })
+            .map(t => (
+              <div key={t.id} style={{ display: 'flex', gap: 8, fontSize: 12, padding: '4px 0' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>☐</span>
+                <span style={{ color: 'var(--text-primary)' }}>{t.title}</span>
+              </div>
+            ))
+        )}
+        {tasksUpdated && (
+          <div style={{ color: 'var(--text-muted)', fontSize: 10, marginTop: 4 }}>
+            Updated {tasksUpdated.toLocaleTimeString()}
+          </div>
         )}
       </div>
-
-      {lastFetched && (
-        <div style={{ color: 'var(--text-muted)', fontSize: 10, marginTop: 12 }}>
-          Updated {new Date(lastFetched).toLocaleTimeString()}
-        </div>
-      )}
     </div>
   )
 }

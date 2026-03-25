@@ -12,17 +12,7 @@ export default function TabBar() {
   const { state, dispatch } = useAppState()
 
   const handleAdd = async () => {
-    let projectPath = state.projectPath
-    if (!projectPath) {
-      const dir = await window.api.selectDirectory()
-      if (!dir) return
-      projectPath = dir
-      dispatch({ type: 'SET_PROJECT_PATH', path: dir })
-      await window.api.watchProject(dir)
-      await window.api.addRecentSession(dir)
-      const branch = await window.api.getGitBranch(dir)
-      dispatch({ type: 'SET_GIT_BRANCH', branch })
-    }
+    const projectPath = state.projectPath || null
     try {
       const id = `terminal-${Date.now()}`
       const ptyId = await window.api.createPty(projectPath)
@@ -32,7 +22,7 @@ export default function TabBar() {
         label: `Terminal ${state.tabs.filter(t => t.type === 'terminal').length + 1}`,
         closeable: true,
         ptyId,
-        projectPath
+        projectPath: projectPath ?? undefined
       }
       dispatch({ type: 'ADD_TAB', tab })
     } catch (err) {

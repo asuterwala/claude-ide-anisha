@@ -1,5 +1,5 @@
 {
-  "name": "claude-ide",
+  "name": "as-ide",
   "version": "0.1.0",
   "description": "Desktop IDE wrapping Claude Code",
   "main": "./out/main/index.js",

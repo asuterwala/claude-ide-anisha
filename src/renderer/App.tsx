@@ -22,25 +22,10 @@ export default function App() {
 
   useEffect(() => {
     async function init() {
-      // Small delay to ensure window is fully ready before showing dialog
-      await new Promise(r => setTimeout(r, 500))
-
       // Check if first launch
       const sessions = await window.api.getRecentSessions()
       dispatch({ type: 'SET_FIRST_LAUNCH', isFirst: sessions.length === 0 })
-
-      try {
-        const dir = await window.api.selectDirectory()
-        if (dir) {
-          dispatch({ type: 'SET_PROJECT_PATH', path: dir })
-          await window.api.watchProject(dir)
-          await window.api.addRecentSession(dir)
-          const branch = await window.api.getGitBranch(dir)
-          dispatch({ type: 'SET_GIT_BRANCH', branch })
-        }
-      } catch (err) {
-        console.error('[App] init error:', err)
-      }
+      // No automatic directory selection - user can open project from Dashboard
     }
     init()
   }, [dispatch])
@@ -79,10 +64,40 @@ export default function App() {
       if (isMod && e.key === 's') {
         dispatch({ type: 'TRACK_FEATURE', feature: 'fileSave' })
       }
+      // Cmd+W: Close active tab
+      if (isMod && e.key === 'w') {
+        e.preventDefault()
+        const activeTab = state.tabs.find(t => t.id === state.activeTabId)
+        if (activeTab?.closeable) {
+          if (activeTab.ptyId) {
+            window.api.destroyPty(activeTab.ptyId)
+          }
+          dispatch({ type: 'CLOSE_TAB', tabId: activeTab.id })
+        }
+      }
+      // Cmd+T: Open new terminal tab
+      if (isMod && e.key === 't') {
+        e.preventDefault()
+        const projectPath = state.projectPath || null
+        window.api.createPty(projectPath).then(ptyId => {
+          const id = `terminal-${Date.now()}`
+          dispatch({
+            type: 'ADD_TAB',
+            tab: {
+              id,
+              type: 'terminal',
+              label: `Terminal ${state.tabs.filter(t => t.type === 'terminal').length + 1}`,
+              closeable: true,
+              ptyId,
+              projectPath: projectPath ?? undefined
+            }
+          })
+        })
+      }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [dispatch])
+  }, [dispatch, state.tabs, state.activeTabId, state.projectPath])
 
   // Track split usage
   useEffect(() => {

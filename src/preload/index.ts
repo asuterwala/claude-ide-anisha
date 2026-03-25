@@ -41,6 +41,7 @@ const api = {
   loadConfig: () => ipcRenderer.invoke('config:load'),
   fetchNotion: (dashboardId: string) => ipcRenderer.invoke('notion:fetch', dashboardId),
   refreshCalendar: () => ipcRenderer.invoke('calendar:refresh'),
+  refreshTasks: () => ipcRenderer.invoke('tasks:refresh'),
   listPythonFiles: (path: string) => ipcRenderer.invoke('streamlit:list', path),
   runStreamlit: (file: string, port: number) => ipcRenderer.invoke('streamlit:run', file, port),
   stopStreamlit: (file: string) => ipcRenderer.invoke('streamlit:stop', file),

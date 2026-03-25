@@ -3,13 +3,13 @@ import { BrowserWindow } from 'electron'
 
 interface PtySession {
   process: pty.IPty
-  projectPath: string
+  projectPath: string | null
 }
 
 const sessions = new Map<string, PtySession>()
 let nextId = 1
 
-export function createPtySession(projectPath: string, window: BrowserWindow): string {
+export function createPtySession(projectPath: string | null, window: BrowserWindow): string {
   const id = `pty-${nextId++}`
   const shell = process.env.SHELL || '/bin/zsh'
 
@@ -18,7 +18,7 @@ export function createPtySession(projectPath: string, window: BrowserWindow): st
     name: 'xterm-256color',
     cols: 120,
     rows: 30,
-    cwd: projectPath,
+    cwd: projectPath || process.env.HOME || '/',
     env: {
       ...process.env,
       TERM: 'xterm-256color',

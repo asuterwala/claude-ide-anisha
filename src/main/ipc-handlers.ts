@@ -475,10 +475,12 @@ export function registerIpcHandlers(): void {
               title.startsWith('Say hello') ||
               title.startsWith('In 5-8 words') ||
               title.includes('MCP tool') ||
+              title.includes('mcp__') ||
               title.startsWith('Use the ') ||
               title.startsWith('You are editing code') ||
+              title.startsWith('[Request interrupted') ||
               title.startsWith('```') ||
-              /^(Get|Fetch|List|Update|Create|Delete|Write|Read)\s/i.test(title)
+              /^(Get|Fetch|List|Update|Create|Delete|Write|Read|Refresh)\s/i.test(title)
             )
             if (title && cwd && !isAutomatedSession) {
               sessions.push({
@@ -556,11 +558,15 @@ export function registerIpcHandlers(): void {
   const CALENDAR_CACHE_PATH = join(homedir(), '.memory', 'mission-control', 'calendar-cache.json')
   const TASKS_CACHE_PATH = join(homedir(), '.memory', 'mission-control', 'tasks-cache.json')
 
-  // Refresh calendar - just re-reads the cache file
-  // The cache is populated externally (by Claude Code sessions, cron jobs, etc.)
+  // Refresh calendar - re-reads the cache file
+  // Note: Cache is populated by Claude Code sessions or external processes
   ipcMain.handle('calendar:refresh', async () => {
-    // Simply return success - the actual fetch will happen in notion:fetch
-    // This allows the UI to trigger a re-read of the cache
+    return { success: true }
+  })
+
+  // Refresh tasks - re-reads the cache file
+  // Note: Cache is populated by Claude Code sessions or external processes
+  ipcMain.handle('tasks:refresh', async () => {
     return { success: true }
   })
 
