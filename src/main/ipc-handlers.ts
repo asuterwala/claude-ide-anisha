@@ -558,16 +558,38 @@ export function registerIpcHandlers(): void {
   const CALENDAR_CACHE_PATH = join(homedir(), '.memory', 'mission-control', 'calendar-cache.json')
   const TASKS_CACHE_PATH = join(homedir(), '.memory', 'mission-control', 'tasks-cache.json')
 
-  // Refresh calendar - re-reads the cache file
-  // Note: Cache is populated by Claude Code sessions or external processes
+  // Run the refresh script to repopulate cache files
+  async function runRefreshScript(): Promise<{ success: boolean; error?: string }> {
+    const scriptPath = join(homedir(), '.local', 'bin', 'refresh-dashboard.sh')
+    if (!existsSync(scriptPath)) {
+      return { success: false, error: 'Refresh script not found at ~/.local/bin/refresh-dashboard.sh' }
+    }
+    try {
+      await execFileAsync('/bin/bash', [scriptPath], {
+        timeout: 120000,
+        env: {
+          ...process.env,
+          CLAUDE_CODE_USE_BEDROCK: 'true',
+          AWS_PROFILE: 'bedrock-users',
+          AWS_REGION: 'us-west-2',
+        },
+      })
+      return { success: true }
+    } catch (err: any) {
+      const msg = err.message || String(err)
+      if (msg.includes('expired') || msg.includes('SSO')) {
+        return { success: false, error: 'AWS SSO token expired. Run: aws sso login --profile bedrock-users' }
+      }
+      return { success: false, error: `Refresh failed: ${msg.slice(0, 200)}` }
+    }
+  }
+
   ipcMain.handle('calendar:refresh', async () => {
-    return { success: true }
+    return runRefreshScript()
   })
 
-  // Refresh tasks - re-reads the cache file
-  // Note: Cache is populated by Claude Code sessions or external processes
   ipcMain.handle('tasks:refresh', async () => {
-    return { success: true }
+    return runRefreshScript()
   })
 
   ipcMain.handle('notion:fetch', async (_event, _dashboardId: string) => {
@@ -575,12 +597,25 @@ export function registerIpcHandlers(): void {
       // Read meetings from calendar cache, filter to upcoming only
       let meetings: any[] = []
       let hadMeetingsToday = false
+      let cacheStale = false
       if (existsSync(CALENDAR_CACHE_PATH)) {
         const calendarData = JSON.parse(readFileSync(CALENDAR_CACHE_PATH, 'utf-8'))
-        const allMeetings = calendarData.today || []
+
+        // Validate cache is from today
+        const fetchedAt = calendarData.fetchedAt ? new Date(calendarData.fetchedAt) : null
+        const now = new Date()
+        const isToday = fetchedAt &&
+          fetchedAt.getFullYear() === now.getFullYear() &&
+          fetchedAt.getMonth() === now.getMonth() &&
+          fetchedAt.getDate() === now.getDate()
+
+        if (!isToday) {
+          cacheStale = true
+        }
+
+        const allMeetings = isToday ? (calendarData.today || []) : []
         hadMeetingsToday = allMeetings.length > 0
 
-        const now = new Date()
         const currentHour = now.getHours()
         const currentMinute = now.getMinutes()
 
@@ -622,10 +657,10 @@ export function registerIpcHandlers(): void {
         }))
       }
 
-      return { meetings, tasks, hadMeetingsToday, error: null }
+      return { meetings, tasks, hadMeetingsToday, cacheStale, error: null }
     } catch (error) {
       console.error('Failed to fetch data:', error)
-      return { meetings: [], tasks: [], error: 'Failed to load data from cache' }
+      return { meetings: [], tasks: [], cacheStale: false, error: 'Failed to load data from cache' }
     }
   })
 

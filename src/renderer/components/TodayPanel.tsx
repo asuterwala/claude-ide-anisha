@@ -18,18 +18,22 @@ async function fetchWithRetry<T>(fn: () => Promise<T>, maxAttempts = 3): Promise
   throw lastError
 }
 
-export function NotionPanel() {
+export function TodayPanel() {
   const { state, dispatch } = useAppState()
   const config = useConfig()
   const { meetings, tasks, loading, error } = state.notion
   const cacheRef = useRef<{ meetings: typeof meetings; tasks: typeof tasks; hadMeetingsToday?: boolean } | null>(null)
   const [hadMeetingsToday, setHadMeetingsToday] = useState(false)
+  const [cacheStale, setCacheStale] = useState(false)
   const [calendarRefreshing, setCalendarRefreshing] = useState(false)
   const [tasksRefreshing, setTasksRefreshing] = useState(false)
   const [calendarUpdated, setCalendarUpdated] = useState<Date | null>(null)
   const [tasksUpdated, setTasksUpdated] = useState<Date | null>(null)
+  const [refreshError, setRefreshError] = useState<string | null>(null)
+  const [calendarSyncStatus, setCalendarSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'failed'>('idle')
+  const [tasksSyncStatus, setTasksSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'failed'>('idle')
 
-  const fetchData = useCallback(async () => {
+  const readCache = useCallback(async () => {
     if (!config?.notion.enabled || !config.notion.dashboardId) return
     dispatch({ type: 'NOTION_LOADING' })
     try {
@@ -39,6 +43,7 @@ export function NotionPanel() {
       } else {
         cacheRef.current = { meetings: data.meetings, tasks: data.tasks, hadMeetingsToday: data.hadMeetingsToday }
         setHadMeetingsToday(data.hadMeetingsToday || false)
+        setCacheStale(data.cacheStale || false)
         dispatch({ type: 'NOTION_LOADED', payload: data })
         const now = new Date()
         setCalendarUpdated(now)
@@ -51,16 +56,41 @@ export function NotionPanel() {
 
   const handleCalendarRefresh = useCallback(async () => {
     setCalendarRefreshing(true)
+    setRefreshError(null)
+    setCalendarSyncStatus('syncing')
     try {
-      await window.api.refreshCalendar()
-      // Re-fetch just to update the UI with new cache data
-      const data = await window.api.fetchNotion(config?.notion.dashboardId || '')
-      if (!data.error) {
-        cacheRef.current = { ...cacheRef.current, meetings: data.meetings, hadMeetingsToday: data.hadMeetingsToday }
-        setHadMeetingsToday(data.hadMeetingsToday || false)
-        dispatch({ type: 'NOTION_LOADED', payload: { ...state.notion, meetings: data.meetings } })
+      // Phase 1: Re-read cache immediately for instant UI feedback
+      const cachedData = await window.api.fetchNotion(config?.notion.dashboardId || '')
+      if (!cachedData.error) {
+        cacheRef.current = { ...cacheRef.current, meetings: cachedData.meetings, hadMeetingsToday: cachedData.hadMeetingsToday }
+        setHadMeetingsToday(cachedData.hadMeetingsToday || false)
+        setCacheStale(cachedData.cacheStale || false)
+        dispatch({ type: 'NOTION_LOADED', payload: { ...state.notion, meetings: cachedData.meetings } })
         setCalendarUpdated(new Date())
       }
+
+      // Phase 2: Run refresh script to pull fresh data from GCal
+      const result = await window.api.refreshCalendar()
+      if (result && !result.success) {
+        setRefreshError(result.error || 'Calendar refresh failed')
+        setCalendarSyncStatus('failed')
+        return
+      }
+
+      // Phase 3: Re-read cache with fresh data
+      const freshData = await window.api.fetchNotion(config?.notion.dashboardId || '')
+      if (!freshData.error) {
+        cacheRef.current = { ...cacheRef.current, meetings: freshData.meetings, hadMeetingsToday: freshData.hadMeetingsToday }
+        setHadMeetingsToday(freshData.hadMeetingsToday || false)
+        setCacheStale(freshData.cacheStale || false)
+        dispatch({ type: 'NOTION_LOADED', payload: { ...state.notion, meetings: freshData.meetings } })
+        setCalendarUpdated(new Date())
+      }
+      setCalendarSyncStatus('success')
+      setTimeout(() => setCalendarSyncStatus('idle'), 5000)
+    } catch {
+      setCalendarSyncStatus('failed')
+      setRefreshError('Calendar refresh failed unexpectedly')
     } finally {
       setCalendarRefreshing(false)
     }
@@ -68,44 +98,79 @@ export function NotionPanel() {
 
   const handleTasksRefresh = useCallback(async () => {
     setTasksRefreshing(true)
+    setRefreshError(null)
+    setTasksSyncStatus('syncing')
     try {
-      await window.api.refreshTasks()
-      // Re-fetch just to update the UI with new cache data
-      const data = await window.api.fetchNotion(config?.notion.dashboardId || '')
-      if (!data.error) {
-        cacheRef.current = { ...cacheRef.current, tasks: data.tasks }
-        dispatch({ type: 'NOTION_LOADED', payload: { ...state.notion, tasks: data.tasks } })
+      // Phase 1: Re-read cache immediately
+      const cachedData = await window.api.fetchNotion(config?.notion.dashboardId || '')
+      if (!cachedData.error) {
+        cacheRef.current = { ...cacheRef.current, tasks: cachedData.tasks }
+        dispatch({ type: 'NOTION_LOADED', payload: { ...state.notion, tasks: cachedData.tasks } })
         setTasksUpdated(new Date())
       }
+
+      // Phase 2: Run refresh script to pull fresh data from Notion
+      const result = await window.api.refreshTasks()
+      if (result && !result.success) {
+        setRefreshError(result.error || 'Tasks refresh failed')
+        setTasksSyncStatus('failed')
+        return
+      }
+
+      // Phase 3: Re-read cache with fresh data
+      const freshData = await window.api.fetchNotion(config?.notion.dashboardId || '')
+      if (!freshData.error) {
+        cacheRef.current = { ...cacheRef.current, tasks: freshData.tasks }
+        dispatch({ type: 'NOTION_LOADED', payload: { ...state.notion, tasks: freshData.tasks } })
+        setTasksUpdated(new Date())
+      }
+      setTasksSyncStatus('success')
+      setTimeout(() => setTasksSyncStatus('idle'), 5000)
+    } catch {
+      setTasksSyncStatus('failed')
+      setRefreshError('Tasks refresh failed unexpectedly')
     } finally {
       setTasksRefreshing(false)
     }
   }, [config, dispatch, state.notion])
 
-  const fetchDataRef = useRef(fetchData)
-  fetchDataRef.current = fetchData
+  const readCacheRef = useRef(readCache)
+  readCacheRef.current = readCache
 
   // Initial fetch when config becomes available
   useEffect(() => {
     if (config?.notion.enabled && config.notion.dashboardId) {
-      fetchData()
+      readCache()
     }
   }, [config?.notion.enabled, config?.notion.dashboardId])
 
-  // Separate interval effect - stable, doesn't recreate on fetchData changes
+  // Auto-refresh every 30 minutes — triggers actual data refresh, not just cache re-read
   useEffect(() => {
     if (!config?.notion.enabled) return
-    const intervalMs = (config?.notion.refreshIntervalMinutes || 30) * 60 * 1000
-    const interval = setInterval(() => {
-      fetchDataRef.current()
-    }, intervalMs)
+    const THIRTY_MINUTES = 30 * 60 * 1000
+    const interval = setInterval(async () => {
+      // Trigger the refresh script, then re-read cache
+      try {
+        await window.api.refreshCalendar()
+      } catch {}
+      readCacheRef.current()
+    }, THIRTY_MINUTES)
     return () => clearInterval(interval)
-  }, [config?.notion.enabled, config?.notion.refreshIntervalMinutes])
+  }, [config?.notion.enabled])
 
   const displayMeetings = error && cacheRef.current ? cacheRef.current.meetings : meetings
   const displayTasks = error && cacheRef.current ? cacheRef.current.tasks : tasks
 
   if (!config?.notion.enabled) return null
+
+  const SyncIndicator = ({ status }: { status: 'idle' | 'syncing' | 'success' | 'failed' }) => {
+    if (status === 'idle') return null
+    const style: React.CSSProperties = { fontSize: 11, marginLeft: 6 }
+    if (status === 'syncing') return <span style={{ ...style, color: 'var(--text-muted)' }}>syncing...</span>
+    if (status === 'success') return <span style={{ ...style, color: '#22c55e' }}>synced</span>
+    if (status === 'failed') return <span style={{ ...style, color: 'var(--accent-error)' }}>sync failed</span>
+    return null
+  }
 
   const RefreshButton = ({ onClick, refreshing, title }: { onClick: () => void; refreshing: boolean; title: string }) => (
     <button
@@ -145,17 +210,31 @@ export function NotionPanel() {
         </div>
       )}
 
-      {/* Calendar Section */}
+      {refreshError && (
+        <div style={{ color: 'var(--accent-error)', fontSize: 12, marginBottom: 8 }}>
+          {refreshError}
+        </div>
+      )}
+
+      {cacheStale && !refreshError && (
+        <div style={{ color: 'var(--text-muted)', fontSize: 11, marginBottom: 8, fontStyle: 'italic' }}>
+          Calendar cache is stale — click refresh to update
+        </div>
+      )}
+
+      {/* Calendar Section (from Google Calendar) */}
       <div style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
           <span style={{ color: 'var(--text-primary)', fontSize: 13, fontWeight: 600 }}>
             Calendar
           </span>
-          <RefreshButton onClick={handleCalendarRefresh} refreshing={calendarRefreshing} title="Refresh calendar from Google" />
+          <RefreshButton onClick={handleCalendarRefresh} refreshing={calendarRefreshing} title="Refresh calendar from Google Calendar" />
+          <SyncIndicator status={calendarSyncStatus} />
         </div>
         {displayMeetings.length === 0 ? (
           <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>
-            {hadMeetingsToday ? 'No more meetings today' : 'No meetings today'}
+            {cacheStale ? 'Calendar data outdated — refresh to see today\'s meetings' :
+             hadMeetingsToday ? 'No more meetings today' : 'No meetings today'}
           </div>
         ) : (
           displayMeetings.map(m => (
@@ -174,13 +253,14 @@ export function NotionPanel() {
         )}
       </div>
 
-      {/* Tasks Section */}
+      {/* Tasks Section (from Notion) */}
       <div>
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
           <span style={{ color: 'var(--text-primary)', fontSize: 13, fontWeight: 600 }}>
             Tasks
           </span>
           <RefreshButton onClick={handleTasksRefresh} refreshing={tasksRefreshing} title="Refresh tasks from Notion" />
+          <SyncIndicator status={tasksSyncStatus} />
         </div>
         {displayTasks.filter(t => t.status !== 'Done').length === 0 ? (
           <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>No pending tasks</div>
@@ -188,7 +268,6 @@ export function NotionPanel() {
           displayTasks
             .filter(t => t.status !== 'Done')
             .sort((a, b) => {
-              // Sort by due date ascending (closest due date first)
               if (!a.dueDate && !b.dueDate) return 0
               if (!a.dueDate) return 1
               if (!b.dueDate) return -1

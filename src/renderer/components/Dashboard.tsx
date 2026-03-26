@@ -1,7 +1,7 @@
 // src/renderer/components/Dashboard.tsx
 import { useConfig } from '../hooks/useConfig'
 import { useAppState } from '../store'
-import { NotionPanel } from './NotionPanel'
+import { TodayPanel } from './TodayPanel'
 import { ModelStatus } from './ModelStatus'
 import { RecentSessions } from './RecentSessions'
 import { SkillsLauncher } from './SkillsLauncher'
@@ -68,7 +68,7 @@ export default function Dashboard({ visible }: { visible: boolean }) {
       }}>
         {/* Left column */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <NotionPanel />
+          <TodayPanel />
           <ModelStatus />
           <TipsPanel />
         </div>
