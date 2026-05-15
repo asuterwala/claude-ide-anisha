@@ -1,4 +1,5 @@
 import { ipcMain, dialog, app, BrowserWindow, net, Notification } from 'electron'
+import { scheduler } from './scheduler'
 import { readdir, readFile, writeFile, stat } from 'fs/promises'
 import { readFileSync, existsSync, writeFileSync, mkdirSync, readdirSync, statSync } from 'fs'
 import { join, relative } from 'path'
@@ -582,6 +583,14 @@ export function registerIpcHandlers(): void {
     // Sort alphabetically
     return skills.sort((a, b) => a.name.localeCompare(b.name))
   })
+
+  // Automations / scheduler
+  ipcMain.handle('automations:list', () => scheduler.list())
+  ipcMain.handle('automations:create', (_e, input) => scheduler.create(input))
+  ipcMain.handle('automations:update', (_e, id, patch) => scheduler.update(id, patch))
+  ipcMain.handle('automations:remove', (_e, id) => scheduler.remove(id))
+  ipcMain.handle('automations:runNow', (_e, id) => scheduler.runNow(id))
+  ipcMain.handle('automations:listRuns', (_e, opts) => scheduler.listRuns(opts))
 
   ipcMain.handle('notify:show', async (_event, title: string, body: string) => {
     const win = BrowserWindow.getFocusedWindow()

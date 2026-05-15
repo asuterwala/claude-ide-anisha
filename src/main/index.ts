@@ -3,6 +3,7 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { registerIpcHandlers } from './ipc-handlers'
 import { destroyAllPtySessions } from './claude-bridge'
+import { scheduler } from './scheduler'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -34,12 +35,18 @@ function createWindow(): BrowserWindow {
   return window
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   electronApp.setAppUserModelId('com.as-ide.app')
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
+
+  try {
+    await scheduler.init()
+  } catch (err) {
+    console.error('Scheduler init failed', err)
+  }
 
   registerIpcHandlers()
   mainWindow = createWindow()
