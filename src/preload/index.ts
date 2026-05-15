@@ -45,6 +45,7 @@ const api = {
   generateSessionSummaries: (sessionIds: string[]): Promise<Record<string, string>> => ipcRenderer.invoke('claudeSessions:generateSummaries', sessionIds),
   getPathForFile: (file: File): string => webUtils.getPathForFile(file),
   listSkills: (): Promise<Array<{ name: string; description: string }>> => ipcRenderer.invoke('skills:list'),
+  getSkills: (): Promise<Array<{ name: string; description: string }>> => ipcRenderer.invoke('skills:list'),
   listAutomations: () => ipcRenderer.invoke('automations:list'),
   createAutomation: (input: any) => ipcRenderer.invoke('automations:create', input),
   updateAutomation: (id: string, patch: any) => ipcRenderer.invoke('automations:update', id, patch),

@@ -1,6 +1,6 @@
 import type { ApiType } from '../preload/index'
 import type { AppConfig } from '../shared/types'
-import type { Automation, AutomationInput, Run } from '../shared/automation-types'
+import type { Automation, AutomationInput, Run, Skill } from '../shared/automation-types'
 
 declare global {
   interface Window {
@@ -14,6 +14,7 @@ declare global {
       runAutomationNow(id: string): Promise<string>
       listRuns(opts?: { sinceDate?: Date; automationId?: string }): Promise<Run[]>
       onRunUpdate(cb: (run: Run) => void): () => void
+      getSkills(): Promise<Skill[]>
     }
   }
 }
