@@ -109,3 +109,116 @@
   background: var(--bg-tertiary);
   cursor: pointer;
 }
+
+/* ── Timeline view ───────────────────────────────────────── */
+
+.time-axis {
+  margin-left: 240px;
+  height: 22px;
+  position: relative;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 8px;
+}
+.time-axis span {
+  position: absolute;
+  top: 2px;
+  transform: translateX(-50%);
+  color: var(--text-muted);
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.auto-row {
+  display: flex;
+  align-items: center;
+  height: 44px;
+  border-bottom: 1px solid var(--border-light);
+}
+.auto-label {
+  width: 240px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 14px;
+}
+.auto-icon { width: 18px; font-size: 14px; }
+.auto-name { color: var(--text-primary); font-size: 13px; font-weight: 500; }
+.auto-cron { color: var(--text-muted); font-size: 10.5px; margin-left: auto; }
+
+.auto-track {
+  flex: 1;
+  height: 26px;
+  position: relative;
+  background:
+    repeating-linear-gradient(90deg, transparent 0, transparent calc(16.667% - 1px), var(--border-light) calc(16.667% - 1px), var(--border-light) 16.667%);
+  border-radius: 4px;
+}
+.run-block {
+  position: absolute;
+  top: 5px;
+  height: 16px;
+  border-radius: 4px;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  min-width: 22px;
+  cursor: pointer;
+  padding: 0 6px;
+  white-space: nowrap;
+}
+.run-block.done {
+  background: var(--accent-success);
+  color: #2D6650;
+}
+.run-block.running {
+  background: var(--accent-warning);
+  color: #8C4A20;
+  animation: pulse-bg 1.8s ease-in-out infinite;
+  box-shadow: 0 0 0 0 rgba(255, 202, 164, 0.6);
+}
+.run-block.failed {
+  background: var(--accent-error);
+  color: #FFF;
+}
+.run-block.scheduled {
+  background: rgba(243, 212, 243, 0.4);
+  border: 1.5px dashed #C99FC9;
+  color: #6B3F6B;
+}
+@keyframes pulse-bg {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 202, 164, 0.7); }
+  50%       { box-shadow: 0 0 0 6px rgba(255, 202, 164, 0); }
+}
+
+.now-marker {
+  position: absolute;
+  top: -22px;
+  bottom: 0;
+  width: 2px;
+  background: var(--accent-primary);
+  z-index: 5;
+  pointer-events: none;
+}
+.now-marker::after {
+  content: 'NOW';
+  position: absolute;
+  top: -16px;
+  left: -16px;
+  background: var(--accent-primary);
+  color: #FFF;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 3px;
+  letter-spacing: 0.3px;
+}
+
+.auto-timeline .empty {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+  margin-top: 40px;
+}
