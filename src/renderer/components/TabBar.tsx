@@ -1,99 +1,57 @@
+import React from 'react'
 import { useAppState } from '../store'
-import type { Tab, TabKind } from '../../shared/types'
-
-const tabColors: Record<TabKind, string> = {
-  dashboard: '#89d185',
-  'folder-chat': '#4fc1ff',
-  'standalone-chat': '#4fc1ff',
-  file: '#dcdcaa',
-  automations: '#c586c0'
-}
+import { groupTabs } from './TabBar/groupTabs'
+import FolderGroup from './FolderGroup'
+import type { Tab } from '../../shared/types'
 
 export default function TabBar() {
   const { state, dispatch } = useAppState()
+  const grouped = groupTabs(state.tabs)
 
-  const handleAdd = async () => {
-    const projectPath = state.projectPath || null
-    try {
-      const id = `terminal-${Date.now()}`
-      const ptyId = await window.api.createPty(projectPath)
-      const tab: Tab = {
-        id,
-        kind: 'folder-chat',
-        label: `Terminal ${state.tabs.filter(t => t.kind === 'folder-chat' || t.kind === 'standalone-chat').length + 1}`,
-        closeable: true,
-        ptyId,
-        folderPath: projectPath ?? undefined
-      }
-      dispatch({ type: 'ADD_TAB', tab })
-    } catch (err) {
-      console.error('[TabBar] Error creating terminal:', err)
-    }
+  const onClick = (id: string) => dispatch({ type: 'SET_ACTIVE_TAB', tabId: id })
+  const onClose = (id: string) => {
+    const tab = state.tabs.find(t => t.id === id)
+    if (tab?.ptyId) window.api.destroyPty(tab.ptyId)
+    dispatch({ type: 'CLOSE_TAB', tabId: id })
   }
 
-  const handleClose = (e: React.MouseEvent, tabId: string) => {
-    e.stopPropagation()
-    const tab = state.tabs.find(t => t.id === tabId)
-    if (tab?.ptyId) {
-      window.api.destroyPty(tab.ptyId)
-    }
-    dispatch({ type: 'CLOSE_TAB', tabId })
-  }
-
-  return (
-    <div style={{
-      background: 'var(--bg-secondary)',
-      display: 'flex',
-      alignItems: 'stretch',
-      borderBottom: '1px solid var(--border-color)',
-      height: 35,
-      WebkitAppRegion: 'drag' as any,
-      paddingLeft: 80
-    }}>
-      {state.tabs.map(tab => (
-        <div
-          key={tab.id}
-          onClick={() => dispatch({ type: 'SET_ACTIVE_TAB', tabId: tab.id })}
-          style={{
-            padding: '8px 16px',
-            background: tab.id === state.activeTabId ? 'var(--bg-primary)' : 'var(--bg-secondary)',
-            color: tab.id === state.activeTabId ? 'var(--text-primary)' : 'var(--text-muted)',
-            borderRight: '1px solid var(--border-color)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            fontSize: 12,
-            cursor: 'pointer',
-            WebkitAppRegion: 'no-drag' as any,
-          }}
-        >
-          <span style={{ color: tabColors[tab.kind], fontSize: 10 }}>●</span>
-          {tab.label}
-          {tab.isDirty && <span style={{ color: 'var(--accent-primary)' }}>●</span>}
-          {tab.closeable && (
-            <span
-              onClick={(e) => handleClose(e, tab.id)}
-              style={{ color: 'var(--text-muted)', cursor: 'pointer', marginLeft: 4 }}
-            >
-              ×
-            </span>
-          )}
-        </div>
-      ))}
-      <div
-        onClick={handleAdd}
-        style={{
-          padding: '8px 16px',
-          color: 'var(--text-muted)',
-          fontSize: 14,
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          WebkitAppRegion: 'no-drag' as any,
-        }}
-      >
-        +
-      </div>
+  const renderStandalone = (t: Tab) => (
+    <div
+      key={t.id}
+      className={`tab ${t.id === state.activeTabId ? 'active' : ''}`}
+      onClick={() => onClick(t.id)}
+    >
+      {iconFor(t)} {t.label}
+      {t.closeable && <span className="x" onClick={(e) => { e.stopPropagation(); onClose(t.id) }}>×</span>}
     </div>
   )
+
+  return (
+    <div className="tabs">
+      {grouped.standalone.map(renderStandalone)}
+      {grouped.groups.length > 0 && <div className="tab-divider"></div>}
+      {grouped.groups.map((g, i) => (
+        <React.Fragment key={g.folderPath}>
+          <FolderGroup
+            folderPath={g.folderPath}
+            tabs={g.tabs}
+            activeTabId={state.activeTabId}
+            onTabClick={onClick}
+            onTabClose={onClose}
+          />
+          {i < grouped.groups.length - 1 && <div className="tab-divider"></div>}
+        </React.Fragment>
+      ))}
+    </div>
+  )
+}
+
+function iconFor(t: Tab) {
+  switch (t.kind) {
+    case 'dashboard': return <span>🏠</span>
+    case 'automations': return <span>⚡</span>
+    case 'standalone-chat': return <span>💬</span>
+    case 'folder-chat': return <span>💬</span>
+    case 'file': return <span>📄</span>
+  }
 }

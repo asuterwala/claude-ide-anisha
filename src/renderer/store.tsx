@@ -37,15 +37,11 @@ type Action =
   | { type: 'CONFIG_LOADED'; payload: AppConfig }
   | { type: 'NOTIFICATIONS_TOGGLE'; payload: boolean }
 
-const dashboardTab: Tab = {
-  id: 'dashboard',
-  kind: 'dashboard',
-  label: 'Dashboard',
-  closeable: false
-}
+const dashboardTab: Tab = { id: 'dashboard', kind: 'dashboard', label: 'Dashboard', closeable: false }
+const automationsTab: Tab = { id: 'automations', kind: 'automations', label: 'Automations', closeable: false }
 
 const initialState: AppState = {
-  tabs: [dashboardTab],
+  tabs: [dashboardTab, automationsTab],
   activeTabId: 'dashboard',
   projectPath: null,
   sidebarOpen: true,
