@@ -12,11 +12,15 @@ import EditorTab from './components/EditorTab'
 import Dashboard from './components/Dashboard'
 import StatusBar from './components/StatusBar'
 import Toast from './components/Toast'
+import CommandPalette from './components/CommandPalette'
+import type { PaletteItem } from './components/CommandPalette/filter'
 
 export default function App() {
   const { state, dispatch } = useAppState()
   useClaudeStatus()
   const [currentToast, setCurrentToast] = useState<{ id: string; message: string } | null>(null)
+  const [paletteOpen, setPaletteOpen] = useState(false)
+  const [paletteItems, setPaletteItems] = useState<PaletteItem[]>([])
 
   useEffect(() => {
     async function init() {
@@ -76,6 +80,48 @@ export default function App() {
     return () => window.removeEventListener('keydown', handler)
   }, [dispatch, state.tabs, state.activeTabId, state.projectPath])
 
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        buildPaletteItems().then(setPaletteItems)
+        setPaletteOpen(p => !p)
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  async function buildPaletteItems(): Promise<PaletteItem[]> {
+    const items: PaletteItem[] = [
+      { id: 'action:new-chat', kind: 'action', label: 'New Claude chat', hint: '⌘T' },
+    ]
+    // Recent chats
+    try {
+      const sessions = await window.api.getRecentSessions?.() ?? []
+      for (const s of sessions.slice(0, 20)) {
+        items.push({ id: `chat:${s.id}`, kind: 'chat', label: s.title ?? 'Untitled', hint: relativeTime(s.startedAt), meta: s })
+      }
+    } catch {}
+    // Skills (best-effort)
+    try {
+      const skills = await (window.api as any).getSkills?.() ?? []
+      for (const sk of skills) items.push({ id: `skill:${sk.name}`, kind: 'skill', label: sk.name, hint: 'skill' })
+    } catch {}
+    return items
+  }
+
+  function relativeTime(ts?: string | number | null): string {
+    if (!ts) return ''
+    const ms = Date.now() - new Date(ts).getTime()
+    const min = Math.round(ms / 60000)
+    if (min < 60) return `${min}m`
+    const hr = Math.round(min / 60)
+    if (hr < 24) return `${hr}h`
+    return `${Math.round(hr / 24)}d`
+  }
+
   const handleNewChat = useCallback(async () => {
     const ptyId = await window.api.createPty(null)
     const id = `chat-${Date.now()}`
@@ -100,6 +146,17 @@ export default function App() {
       console.error('Failed to resume session:', err)
     }
   }, [dispatch])
+
+  function handlePaletteSelect(item: PaletteItem) {
+    if (item.kind === 'action' && item.id === 'action:new-chat') {
+      handleNewChat()
+    } else if (item.kind === 'chat' && item.meta) {
+      const session = item.meta as any
+      handleResumeSession(session.id, session.projectPath ?? '')
+    } else if (item.kind === 'skill') {
+      // Future: send /skill to active terminal. For MVP, just close.
+    }
+  }
 
   const dismissToast = useCallback(() => setCurrentToast(null), [])
 
@@ -140,6 +197,12 @@ export default function App() {
       {currentToast && (
         <Toast message={currentToast.message} onDismiss={dismissToast} />
       )}
+      <CommandPalette
+        visible={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        items={paletteItems}
+        onSelect={handlePaletteSelect}
+      />
     </div>
   )
 }
