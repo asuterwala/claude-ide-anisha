@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useAppState } from './store'
 import { useClaudeStatus } from './hooks/useClaudeStatus'
 import TabBar from './components/TabBar'
-import FileExplorer from './components/FileExplorer'
+import Sidebar from './components/Sidebar'
 import TerminalTab from './components/TerminalTab'
 import EditorTab from './components/EditorTab'
 import Dashboard from './components/Dashboard'
@@ -72,13 +72,22 @@ export default function App() {
     return () => window.removeEventListener('keydown', handler)
   }, [dispatch, state.tabs, state.activeTabId, state.projectPath])
 
+  const handleNewChat = useCallback(async () => {
+    const ptyId = await window.api.createPty(null)
+    const id = `chat-${Date.now()}`
+    dispatch({
+      type: 'ADD_TAB',
+      tab: { id, kind: 'standalone-chat', label: 'Claude — Home', closeable: true, ptyId }
+    })
+  }, [dispatch])
+
   const dismissToast = useCallback(() => setCurrentToast(null), [])
 
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#1e1e1e' }}>
       <TabBar />
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-        <FileExplorer />
+        <Sidebar onNewChat={handleNewChat}>{null}</Sidebar>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <Dashboard visible={state.activeTabId === 'dashboard'} />
           {state.tabs
