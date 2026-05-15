@@ -22,20 +22,37 @@ export function SkillsLauncher({ compact }: SkillsLauncherProps = {}) {
     }
   }
 
-  const openSkillsPalette = () => {
-    // Synthesize Cmd+K so App.tsx's existing palette listener opens it.
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }))
-  }
+  const [expanded, setExpanded] = useState(false)
 
   if (compact) {
     return (
       <section className="sidebar-section">
         <div className="sidebar-header"><span>Quick Tools</span></div>
-        <div className="row" onClick={openSkillsPalette}>
-          <span className="dot"></span>
+        <div className="row" onClick={() => setExpanded(e => !e)} style={{ cursor: 'pointer' }}>
+          <span className="chev" style={{ width: 12, color: 'var(--text-muted)', fontSize: 9 }}>
+            {expanded ? '▾' : '▸'}
+          </span>
           <span className="name">Skills</span>
           <span className="pill">{skills.length}</span>
         </div>
+        {expanded && skills.length === 0 && (
+          <div style={{ padding: '6px 26px', color: 'var(--text-muted)', fontSize: 12 }}>
+            No skills found
+          </div>
+        )}
+        {expanded && skills.map(skill => (
+          <div
+            key={skill.name}
+            className="row"
+            onClick={() => executeSkill(skill.name)}
+            title={skill.description}
+            style={{ paddingLeft: 26, fontSize: 12 }}
+          >
+            <span style={{ color: 'var(--accent-primary)', fontFamily: "'iA Writer Mono S', 'SF Mono', monospace" }}>
+              /{skill.name}
+            </span>
+          </div>
+        ))}
       </section>
     )
   }
