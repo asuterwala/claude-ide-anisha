@@ -176,17 +176,20 @@ Scheduled Opus runs can add up. The Automations view surfaces cost visibility an
 
 ## Migration / branch strategy
 
-1. Work entirely on `v2` branch. `main` remains the running IDE.
+User confirmed they will not keep the old IDE running. The rebuild replaces it outright; no parallel-run support, no migration scripts.
+
+1. Work on the `v2` branch for safety. `main` is untouched during the rewrite so we have a rollback point if something blocks mid-way. The user does **not** need to run the `main` IDE during the rebuild.
 2. Implementation phases (each is a separate commit set):
-   1. Theme + sidebar shell + tab bar with grouping (no functional changes to scheduler yet).
-   2. Command palette (Cmd+K) unifying existing search + quick-open.
-   3. Status bar rewrite.
-   4. Scheduler module + `~/.claude-ide/` scaffolding + IPC surface.
-   5. Automations view (Timeline + List + create/edit form).
-   6. Catch-up + orphan sweep on startup.
-   7. Removal of `NotionPanel`, `QuickSlack`, `TipsPanel`, `TimeSaved`, `ProjectSearch`, `QuickOpen`, split-editor.
-3. Test alongside the old IDE: keep the `as-ide` package name unchanged so the OS doesn't track them as two separate apps. During dev mode (`npm run dev`), the title bar shows a branch suffix (e.g. `Claude IDE (v2)`) so the user can tell the two windows apart. Both can run via `npm run dev` from separate worktrees of `main` and `v2`.
-4. When v2 is stable, merge `v2` into `main` and rebuild.
+   1. Strip removed components in one cleanup commit: `NotionPanel`, `QuickSlack`, `TipsPanel`, `TimeSaved`, `ProjectSearch`, `QuickOpen`, split-editor logic, related state slices. Old IDE on `v2` won't run after this; old IDE on `main` still works as a fallback.
+   2. Theme + sidebar shell + tab bar with folder grouping.
+   3. Command palette (Cmd+K) unifying existing search + quick-open.
+   4. Status bar rewrite.
+   5. Scheduler module + `~/.claude-ide/` scaffolding + IPC surface.
+   6. Automations view (Timeline + List + create/edit form).
+   7. Catch-up + orphan sweep on startup.
+3. Package name (`as-ide`) and app identity stay the same — the v2 build replaces the old IDE in `/Applications` directly. No dual-install considerations.
+4. When v2 is stable, merge `v2` into `main` (fast-forward or squash). The old IDE code disappears with that merge.
+5. Keep `main` history accessible via tag (`v1-final` or similar) before merging — cheap insurance if the user ever wants to reference the old behavior.
 
 ## Testing
 
