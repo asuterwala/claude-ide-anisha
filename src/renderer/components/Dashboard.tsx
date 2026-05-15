@@ -1,11 +1,9 @@
 // src/renderer/components/Dashboard.tsx
 import { useConfig } from '../hooks/useConfig'
 import { useAppState } from '../store'
-import { TodayPanel } from './TodayPanel'
 import { ModelStatus } from './ModelStatus'
 import { RecentSessions } from './RecentSessions'
 import { SkillsLauncher } from './SkillsLauncher'
-import { TipsPanel } from './TipsPanel'
 
 export default function Dashboard({ visible }: { visible: boolean }) {
   const config = useConfig()
@@ -31,7 +29,7 @@ export default function Dashboard({ visible }: { visible: boolean }) {
       background: 'var(--bg-primary)',
       overflowY: 'auto'
     }}>
-      {/* Header with Time Saved */}
+      {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <div>
           <h1 style={{ margin: 0, color: 'var(--text-primary)', fontSize: 24, fontWeight: 600 }}>
@@ -68,9 +66,7 @@ export default function Dashboard({ visible }: { visible: boolean }) {
       }}>
         {/* Left column */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <TodayPanel />
           <ModelStatus />
-          <TipsPanel />
         </div>
 
         {/* Right column */}

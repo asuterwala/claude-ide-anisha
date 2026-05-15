@@ -1,9 +1,9 @@
-import { ipcMain, dialog, app, BrowserWindow, net, session, Notification } from 'electron'
+import { ipcMain, dialog, app, BrowserWindow, net, Notification } from 'electron'
 import { readdir, readFile, writeFile, stat } from 'fs/promises'
 import { readFileSync, existsSync, writeFileSync, mkdirSync, readdirSync, statSync } from 'fs'
 import { join, relative } from 'path'
 import { homedir } from 'os'
-import { execFile, spawn } from 'child_process'
+import { execFile } from 'child_process'
 import { promisify } from 'util'
 
 const execFileAsync = promisify(execFile)
@@ -17,15 +17,10 @@ const teamStatsConfigFile = () => join(app.getPath('userData'), 'team-stats-conf
 const anonIdFile = () => join(app.getPath('userData'), 'anon-id.json')
 const CONFIG_PATH = join(homedir(), '.config', 'claude-ide-mc', 'config.json')
 
-const streamlitProcesses = new Map<string, { pid: number; port: number }>()
 
 const DEFAULT_CONFIG = {
-  user: { name: '', slackSignature: '_Sent by Claude Code_ :claude:' },
-  notion: { enabled: true, dashboardId: '', refreshIntervalMinutes: 30 },
-  streamlit: { enabled: true, defaultPort: 8501, keepRunningOnClose: false },
+  user: { name: '' },
   notifications: { enabled: true, quietHoursStart: null, quietHoursEnd: null },
-  slack: { enabled: true, draftVoice: 'direct, concise, collaborative', quickRecipients: [] },
-  skills: { categories: [], timeSavedWeights: {} },
   theme: 'light'
 }
 
@@ -552,196 +547,6 @@ export function registerIpcHandlers(): void {
       console.error('Failed to load config:', error)
       return DEFAULT_CONFIG
     }
-  })
-
-  // Data fetching from cache files (populated by Claude CLI / MCP)
-  const CALENDAR_CACHE_PATH = join(homedir(), '.memory', 'mission-control', 'calendar-cache.json')
-  const TASKS_CACHE_PATH = join(homedir(), '.memory', 'mission-control', 'tasks-cache.json')
-
-  // Run the refresh script to repopulate cache files
-  async function runRefreshScript(): Promise<{ success: boolean; error?: string }> {
-    const scriptPath = join(homedir(), '.local', 'bin', 'refresh-dashboard.sh')
-    if (!existsSync(scriptPath)) {
-      return { success: false, error: 'Refresh script not found at ~/.local/bin/refresh-dashboard.sh' }
-    }
-    try {
-      await execFileAsync('/bin/bash', [scriptPath], {
-        timeout: 120000,
-        env: {
-          ...process.env,
-          CLAUDE_CODE_USE_BEDROCK: 'true',
-          AWS_PROFILE: 'bedrock-users',
-          AWS_REGION: 'us-west-2',
-        },
-      })
-      return { success: true }
-    } catch (err: any) {
-      const msg = err.message || String(err)
-      if (msg.includes('expired') || msg.includes('SSO')) {
-        return { success: false, error: 'AWS SSO token expired. Run: aws sso login --profile bedrock-users' }
-      }
-      return { success: false, error: `Refresh failed: ${msg.slice(0, 200)}` }
-    }
-  }
-
-  ipcMain.handle('calendar:refresh', async () => {
-    return runRefreshScript()
-  })
-
-  ipcMain.handle('tasks:refresh', async () => {
-    return runRefreshScript()
-  })
-
-  ipcMain.handle('notion:fetch', async (_event, _dashboardId: string) => {
-    try {
-      // Read meetings from calendar cache, filter to upcoming only
-      let meetings: any[] = []
-      let hadMeetingsToday = false
-      let cacheStale = false
-      if (existsSync(CALENDAR_CACHE_PATH)) {
-        const calendarData = JSON.parse(readFileSync(CALENDAR_CACHE_PATH, 'utf-8'))
-
-        // Validate cache is from today
-        const fetchedAt = calendarData.fetchedAt ? new Date(calendarData.fetchedAt) : null
-        const now = new Date()
-        const isToday = fetchedAt &&
-          fetchedAt.getFullYear() === now.getFullYear() &&
-          fetchedAt.getMonth() === now.getMonth() &&
-          fetchedAt.getDate() === now.getDate()
-
-        if (!isToday) {
-          cacheStale = true
-        }
-
-        const allMeetings = isToday ? (calendarData.today || []) : []
-        hadMeetingsToday = allMeetings.length > 0
-
-        const currentHour = now.getHours()
-        const currentMinute = now.getMinutes()
-
-        meetings = allMeetings
-          .map((m: any, i: number) => {
-            // Parse time like "7:00 AM" or "2:30 PM"
-            const timeMatch = m.time.match(/(\d+):(\d+)\s*(AM|PM)/i)
-            if (timeMatch) {
-              let hour = parseInt(timeMatch[1])
-              const minute = parseInt(timeMatch[2])
-              const isPM = timeMatch[3].toUpperCase() === 'PM'
-              if (isPM && hour !== 12) hour += 12
-              if (!isPM && hour === 12) hour = 0
-              return { ...m, _hour: hour, _minute: minute, id: `meeting-${i}` }
-            }
-            return { ...m, _hour: 0, _minute: 0, id: `meeting-${i}` }
-          })
-          .filter((m: any) => {
-            // Keep meetings that haven't started yet
-            return m._hour > currentHour || (m._hour === currentHour && m._minute > currentMinute)
-          })
-          .map((m: any) => ({
-            id: m.id,
-            title: m.title,
-            time: m.time,
-            attendees: m.attendees
-          }))
-      }
-
-      // Read tasks from tasks cache
-      let tasks: any[] = []
-      if (existsSync(TASKS_CACHE_PATH)) {
-        const tasksData = JSON.parse(readFileSync(TASKS_CACHE_PATH, 'utf-8'))
-        tasks = (tasksData.tasks || []).map((t: any) => ({
-          id: t.id,
-          title: t.title,
-          status: t.status,
-          dueDate: t.dueDate
-        }))
-      }
-
-      return { meetings, tasks, hadMeetingsToday, cacheStale, error: null }
-    } catch (error) {
-      console.error('Failed to fetch data:', error)
-      return { meetings: [], tasks: [], cacheStale: false, error: 'Failed to load data from cache' }
-    }
-  })
-
-  // Streamlit handlers
-  ipcMain.handle('streamlit:list', async (_event, projectPath: string) => {
-    const files: any[] = []
-    try {
-      const entries = readdirSync(projectPath)
-      for (const entry of entries) {
-        if (entry.endsWith('.py')) {
-          const fullPath = join(projectPath, entry)
-          const content = readFileSync(fullPath, 'utf-8')
-          const isStreamlit = content.includes('import streamlit') || content.includes('from streamlit')
-          const stat = statSync(fullPath)
-          files.push({ path: fullPath, name: entry, isStreamlit, lastModified: stat.mtimeMs })
-        }
-      }
-    } catch (error) {
-      console.error('Failed to list Python files:', error)
-    }
-    return files
-  })
-
-  ipcMain.handle('streamlit:run', async (_event, filePath: string, port: number) => {
-    const proc = spawn('streamlit', ['run', filePath, '--server.port', String(port)], {
-      detached: true, stdio: 'ignore'
-    })
-    proc.unref()
-    streamlitProcesses.set(filePath, { pid: proc.pid!, port })
-    return { success: true, pid: proc.pid, port }
-  })
-
-  ipcMain.handle('streamlit:stop', async (_event, filePath: string) => {
-    const proc = streamlitProcesses.get(filePath)
-    if (proc) {
-      try {
-        process.kill(proc.pid)
-        streamlitProcesses.delete(filePath)
-        return { success: true }
-      } catch { return { success: false, error: 'Process not found' } }
-    }
-    return { success: false, error: 'No process tracked' }
-  })
-
-  ipcMain.handle('streamlit:status', async () => {
-    const apps: any[] = []
-    for (const [file, { pid, port }] of streamlitProcesses) {
-      try {
-        process.kill(pid, 0)
-        apps.push({ file, port, status: 'running', pid })
-      } catch {
-        streamlitProcesses.delete(file)
-      }
-    }
-    return apps
-  })
-
-  // Slack message sending
-  ipcMain.handle('slack:send', async (_event, channelId: string, message: string) => {
-    // Placeholder - would call MCP tool via Claude CLI
-    console.log('Sending slack to', channelId, ':', message)
-    return { success: true }
-  })
-
-  // Time Saved tracking
-  const TIME_SAVED_PATH = join(homedir(), '.memory', 'mission-control', 'time-saved.json')
-
-  ipcMain.handle('timeSaved:load', async () => {
-    try {
-      if (!existsSync(TIME_SAVED_PATH)) return {}
-      return JSON.parse(readFileSync(TIME_SAVED_PATH, 'utf-8'))
-    } catch { return {} }
-  })
-
-  ipcMain.handle('timeSaved:save', async (_event, data: any) => {
-    try {
-      const dir = join(homedir(), '.memory', 'mission-control')
-      if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
-      writeFileSync(TIME_SAVED_PATH, JSON.stringify(data, null, 2))
-      return { success: true }
-    } catch (error) { return { success: false, error: String(error) } }
   })
 
   // Skills auto-detect from ~/.claude/skills/

@@ -35,76 +35,15 @@ export interface RecentSession {
   lastOpened: number
 }
 
-// Notion types
-export interface NotionMeeting {
-  id: string
-  title: string
-  time: Date
-  attendees?: number
-}
-
-export interface NotionTask {
-  id: string
-  title: string
-  status: 'Not started' | 'In progress' | 'Done'
-  due?: Date
-}
-
-// Streamlit types
-export interface StreamlitApp {
-  file: string
-  port: number | null
-  status: 'stopped' | 'running' | 'crashed' | 'external'
-  pid: number | null
-}
-
-export interface PythonFile {
-  path: string
-  name: string
-  isStreamlit: boolean
-  lastModified: number
-}
-
 // Config types
 export interface AppConfig {
   user: {
     name: string
-    slackSignature: string
-  }
-  notion: {
-    enabled: boolean
-    dashboardId: string
-    refreshIntervalMinutes: number
-  }
-  streamlit: {
-    enabled: boolean
-    defaultPort: number
-    keepRunningOnClose: boolean
   }
   notifications: {
     enabled: boolean
     quietHoursStart: string | null
     quietHoursEnd: string | null
   }
-  slack: {
-    enabled: boolean
-    draftVoice: string
-    quickRecipients: Array<{ id: string; name: string; type: string }>
-  }
-  skills: {
-    categories: Array<{
-      label: string
-      skills: Array<{ cmd: string; desc: string }>
-    }>
-    timeSavedWeights: Record<string, number>
-  }
   theme: 'light'
-}
-
-// Time saved types
-export interface TimeSavedData {
-  [date: string]: {
-    minutes: number
-    actions: string[]
-  }
 }
