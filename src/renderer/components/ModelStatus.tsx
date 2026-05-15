@@ -7,7 +7,7 @@ export function ModelStatus() {
   if (!model && !cost && !tokens && !context) return null
 
   return (
-    <div style={{ background: 'var(--panel-bg)', borderRadius: 8, padding: 16, border: '1px solid var(--panel-border)', boxShadow: 'var(--panel-shadow)' }}>
+    <div style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: 16, border: '1px solid var(--border-color)', boxShadow: '0 1px 3px rgba(45, 55, 72, 0.05)' }}>
       <h3 style={{ margin: '0 0 12px', color: 'var(--text-primary)', fontSize: 14, fontWeight: 600 }}>Model Status</h3>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {model && (

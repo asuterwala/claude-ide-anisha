@@ -41,7 +41,7 @@ export function SkillsLauncher() {
           fontSize: 12,
           alignItems: 'start'
         }}
-          onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
+          onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-tertiary)')}
           onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
           <code style={{ color: 'var(--accent-primary)', lineHeight: 1.4 }}>/{skill.name}</code>
           <span style={{ color: 'var(--text-secondary)', lineHeight: 1.4 }}>{skill.description}</span>
@@ -51,5 +51,5 @@ export function SkillsLauncher() {
   )
 }
 
-const panelStyle = { background: 'var(--panel-bg)', borderRadius: 8, padding: 16, border: '1px solid var(--panel-border)', boxShadow: 'var(--panel-shadow)' }
+const panelStyle = { background: 'var(--bg-secondary)', borderRadius: 8, padding: 16, border: '1px solid var(--border-color)', boxShadow: '0 1px 3px rgba(45, 55, 72, 0.05)' }
 const headerStyle = { margin: '0 0 12px', color: 'var(--text-primary)', fontSize: 14, fontWeight: 600 as const }

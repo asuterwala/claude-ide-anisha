@@ -93,7 +93,7 @@ export function RecentSessions() {
               cursor: 'pointer',
               transition: 'background 0.15s'
             }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
+            onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-tertiary)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
           >
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -130,7 +130,7 @@ export function RecentSessions() {
               cursor: 'pointer',
               transition: 'background 0.15s'
             }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'var(--hover-bg)')}
+            onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-tertiary)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
           >
             Load more
@@ -142,11 +142,11 @@ export function RecentSessions() {
 }
 
 const panelStyle = {
-  background: 'var(--panel-bg)',
+  background: 'var(--bg-secondary)',
   borderRadius: 8,
   padding: 16,
-  border: '1px solid var(--panel-border)',
-  boxShadow: 'var(--panel-shadow)'
+  border: '1px solid var(--border-color)',
+  boxShadow: '0 1px 3px rgba(45, 55, 72, 0.05)'
 }
 
 const headerStyle = {
