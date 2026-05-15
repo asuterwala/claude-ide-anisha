@@ -1,0 +1,102 @@
+#!/usr/bin/env bash
+# Claude IDE — automation run engine.
+# Usage: run-automation <automation-id> [trigger]
+# trigger: schedule (default) | manual | catchup
+set -uo pipefail
+
+AUTOMATION_ID="${1:-}"
+TRIGGER="${2:-schedule}"
+[ -z "$AUTOMATION_ID" ] && { echo "missing automation id" >&2; exit 2; }
+
+CLAUDE_IDE_DIR="$HOME/.claude-ide"
+AUTOMATIONS_FILE="$CLAUDE_IDE_DIR/automations.json"
+RUNS_DIR="$CLAUDE_IDE_DIR/runs"
+ENV_FILE="$CLAUDE_IDE_DIR/env.json"
+
+[ -f "$AUTOMATIONS_FILE" ] || { echo "automations.json missing" >&2; exit 3; }
+
+# Source plist-equivalent env so PATH includes claude
+if [ -f "$ENV_FILE" ]; then
+  export HOME="$(jq -r '.HOME' "$ENV_FILE")"
+  export PATH="$(jq -r '.PATH' "$ENV_FILE")"
+  export CLAUDE_CODE_USE_BEDROCK="$(jq -r '.CLAUDE_CODE_USE_BEDROCK' "$ENV_FILE")"
+fi
+
+ENTRY=$(jq -c --arg id "$AUTOMATION_ID" '.[] | select(.id == $id)' "$AUTOMATIONS_FILE")
+[ -z "$ENTRY" ] && { echo "automation not found: $AUTOMATION_ID" >&2; exit 4; }
+
+NAME=$(echo "$ENTRY" | jq -r '.name')
+SKILL=$(echo "$ENTRY" | jq -r '.skill')
+FOLDER=$(echo "$ENTRY" | jq -r '.folder' | sed "s|^~|$HOME|")
+TIMEOUT_MIN=$(echo "$ENTRY" | jq -r '.timeoutMin')
+MODEL=$(echo "$ENTRY" | jq -r '.model')
+DEPENDS_ON=$(echo "$ENTRY" | jq -r '.dependsOn | join(" ")')
+
+TS="$(date -u +%Y%m%dT%H%M%SZ)"
+RUN_DIR="$RUNS_DIR/${AUTOMATION_ID}__${TS}"
+mkdir -p "$RUN_DIR"
+STATUS="$RUN_DIR/status.json"
+LOG="$RUN_DIR/run.log"
+
+write_status() {
+  jq -n \
+    --arg runId "${AUTOMATION_ID}__${TS}" \
+    --arg automationId "$AUTOMATION_ID" \
+    --arg state "$1" \
+    --arg startedAt "$STARTED_AT" \
+    --arg triggeredBy "$TRIGGER" \
+    --arg finishedAt "${2:-}" \
+    --argjson durationMs "${3:-null}" \
+    --argjson exitCode "${4:-null}" \
+    --argjson tokensUsed "${5:-null}" \
+    --argjson costUsd "${6:-null}" \
+    --arg failureReason "${7:-}" \
+    '{runId:$runId, automationId:$automationId, state:$state, startedAt:$startedAt, finishedAt:($finishedAt | select(. != "") // null), durationMs:$durationMs, exitCode:$exitCode, tokensUsed:$tokensUsed, costUsd:$costUsd, triggeredBy:$triggeredBy, failureReason:($failureReason | select(. != ""))}' \
+    > "$STATUS"
+}
+
+STARTED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+write_status "running"
+
+# Dependency check: each upstream must have a completed run TODAY.
+TODAY="$(date +%Y%m%d)"
+for DEP in $DEPENDS_ON; do
+  FOUND=0
+  for d in "$RUNS_DIR"/"${DEP}"__"${TODAY}"*; do
+    [ -f "$d/status.json" ] || continue
+    STATE=$(jq -r '.state' "$d/status.json")
+    if [ "$STATE" = "completed" ]; then FOUND=1; break; fi
+  done
+  if [ "$FOUND" = 0 ]; then
+    FINISHED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    write_status "skipped" "$FINISHED_AT" 0 null null null "dependency $DEP not completed today"
+    exit 0
+  fi
+done
+
+# Execute claude in folder with the skill activated.
+# date +%s%3N is GNU-only; macOS BSD date doesn't support %3N, so use python3 for ms.
+ms_now() { python3 -c 'import time;print(int(time.time()*1000))'; }
+START_MS=$(ms_now)
+cd "$FOLDER" || { write_status "failed" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" 0 1 null null "folder not found: $FOLDER"; exit 1; }
+
+set +e
+timeout "${TIMEOUT_MIN}m" claude -p "/skill ${SKILL}" --model "${MODEL}" > "$LOG" 2>&1
+EXIT_CODE=$?
+set -e
+
+FINISHED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+END_MS=$(ms_now)
+DURATION=$((END_MS - START_MS))
+
+# Best-effort cost + token extraction from log
+COST=$(grep -oE '\$[0-9]+\.[0-9]+' "$LOG" | tail -1 | sed 's/\$//' || echo "")
+TOKENS=$(grep -oE '[0-9]+(\.[0-9]+)?[KM]? tokens' "$LOG" | tail -1 | sed -E 's/ tokens//' || echo "")
+
+if [ "$EXIT_CODE" = 124 ]; then
+  write_status "timeout" "$FINISHED_AT" "$DURATION" "$EXIT_CODE" null null "exceeded ${TIMEOUT_MIN}min"
+elif [ "$EXIT_CODE" = 0 ]; then
+  write_status "completed" "$FINISHED_AT" "$DURATION" "$EXIT_CODE" "${TOKENS:-null}" "${COST:-null}"
+else
+  write_status "failed" "$FINISHED_AT" "$DURATION" "$EXIT_CODE" "${TOKENS:-null}" "${COST:-null}" "exit $EXIT_CODE"
+fi
