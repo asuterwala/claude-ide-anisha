@@ -3,6 +3,7 @@ import { useAppState } from './store'
 import { useClaudeStatus } from './hooks/useClaudeStatus'
 import TabBar from './components/TabBar'
 import Sidebar from './components/Sidebar'
+import FileExplorer from './components/FileExplorer'
 import TerminalTab from './components/TerminalTab'
 import EditorTab from './components/EditorTab'
 import Dashboard from './components/Dashboard'
@@ -87,7 +88,9 @@ export default function App() {
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#1e1e1e' }}>
       <TabBar />
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-        <Sidebar onNewChat={handleNewChat}>{null}</Sidebar>
+        <Sidebar onNewChat={handleNewChat}>
+          <FileExplorer />
+        </Sidebar>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <Dashboard visible={state.activeTabId === 'dashboard'} />
           {state.tabs

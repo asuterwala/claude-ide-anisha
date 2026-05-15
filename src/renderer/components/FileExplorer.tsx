@@ -1,34 +1,30 @@
 import { useState } from 'react'
 import { useAppState } from '../store'
 import { useFileTree } from '../hooks/useFileTree'
-import type { FileNode, GitFileStatus, Tab } from '../../shared/types'
+import type { FileNode, GitFileStatus } from '../../shared/types'
 
-const gitBadgeColors: Record<string, string> = {
-  modified: '#e8a838',
-  untracked: '#89d185',
-  deleted: '#f44747',
-  added: '#89d185',
-  renamed: '#4fc1ff'
+function gitBadgeClass(status: GitFileStatus): string | null {
+  if (status === 'modified') return 'modified'
+  if (status === 'added') return 'added'
+  if (status === 'untracked') return 'untracked'
+  return null
 }
 
-const gitBadgeLetters: Record<string, string> = {
-  modified: 'M',
-  untracked: 'U',
-  deleted: 'D',
-  added: 'A',
-  renamed: 'R'
+function gitBadgeLetter(status: GitFileStatus): string {
+  if (status === 'modified') return 'M'
+  if (status === 'added') return '+'
+  if (status === 'untracked') return '?'
+  if (status === 'deleted') return 'D'
+  if (status === 'renamed') return 'R'
+  return ''
 }
 
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  return `${(bytes / 1024).toFixed(1)} KB`
-}
-
-function FileTreeNode({ node, depth, gitStatuses, onFileClick }: {
+function FileTreeNode({ node, depth, gitStatuses, onFileClick, onFolderClick }: {
   node: FileNode
   depth: number
   gitStatuses: Record<string, GitFileStatus>
   onFileClick: (path: string, name: string) => void
+  onFolderClick: (path: string, name: string) => void
 }) {
   const [expanded, setExpanded] = useState(false)
   const [children, setChildren] = useState<FileNode[]>([])
@@ -40,6 +36,7 @@ function FileTreeNode({ node, depth, gitStatuses, onFileClick }: {
         setChildren(nodes)
       }
       setExpanded(!expanded)
+      onFolderClick(node.path, node.name)
     } else {
       onFileClick(node.path, node.name)
     }
@@ -47,38 +44,30 @@ function FileTreeNode({ node, depth, gitStatuses, onFileClick }: {
 
   const relativePath = node.path.split('/').slice(-Math.max(depth + 1, 1)).join('/')
   const status = gitStatuses[relativePath] || null
+  const badgeClass = gitBadgeClass(status)
+  const badgeLetter = gitBadgeLetter(status)
+
+  // Map depth to indent class (depth 0 = no extra indent, depth 1 = indent-1, depth 2+ = indent-2)
+  const indentClass = depth === 1 ? 'indent-1' : depth >= 2 ? 'indent-2' : ''
 
   return (
     <>
       <div
+        className={`tree-item${indentClass ? ' ' + indentClass : ''}`}
         onClick={handleClick}
-        style={{
-          padding: '3px 8px',
-          paddingLeft: 16 + depth * 16,
-          cursor: 'pointer',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          color: node.isDirectory ? '#ccc' : '#ce9178',
-          fontSize: 13,
-        }}
-        onMouseEnter={e => (e.currentTarget.style.background = '#2a2d2e')}
-        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
       >
-        <span>
-          {node.isDirectory && (expanded ? '▾ ' : '▸ ')}
+        <span className="chev">
+          {node.isDirectory ? (expanded ? '▾' : '▸') : ''}
+        </span>
+        <span className="ico">
+          {node.isDirectory ? (expanded ? '📂' : '📁') : '📄'}
+        </span>
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
           {node.name}
         </span>
-        <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          {status && (
-            <span style={{ color: gitBadgeColors[status], fontSize: 11 }}>
-              {gitBadgeLetters[status]}
-            </span>
-          )}
-          {!node.isDirectory && node.size != null && (
-            <span style={{ color: '#666', fontSize: 11 }}>{formatSize(node.size)}</span>
-          )}
-        </span>
+        {badgeClass && (
+          <span className={`git ${badgeClass}`}>{badgeLetter}</span>
+        )}
       </div>
       {expanded && children.map(child => (
         <FileTreeNode
@@ -87,6 +76,7 @@ function FileTreeNode({ node, depth, gitStatuses, onFileClick }: {
           depth={depth + 1}
           gitStatuses={gitStatuses}
           onFileClick={onFileClick}
+          onFolderClick={onFolderClick}
         />
       ))}
     </>
@@ -104,45 +94,60 @@ export default function FileExplorer() {
       return
     }
 
-    const tab: Tab = {
-      id: `editor-${Date.now()}`,
-      kind: 'file',
-      label: fileName,
-      closeable: true,
-      filePath
+    dispatch({
+      type: 'ADD_TAB',
+      tab: {
+        id: `file-${Date.now()}`,
+        kind: 'file',
+        label: fileName,
+        closeable: true,
+        folderPath: state.projectPath ?? undefined,
+        filePath
+      }
+    })
+  }
+
+  const handleFolderClick = async (folderPath: string, folderName: string) => {
+    const existing = state.tabs.find(t => t.kind === 'folder-chat' && t.folderPath === folderPath)
+    if (existing) {
+      dispatch({ type: 'SET_ACTIVE_TAB', tabId: existing.id })
+      return
     }
-    dispatch({ type: 'ADD_TAB', tab })
+
+    const ptyId = await window.api.createPty(folderPath)
+    dispatch({
+      type: 'ADD_TAB',
+      tab: {
+        id: `folder-chat-${Date.now()}`,
+        kind: 'folder-chat',
+        label: folderName,
+        closeable: true,
+        folderPath,
+        ptyId
+      }
+    })
   }
 
   if (!state.projectPath) return null
 
   return (
-    <div style={{
-      width: 220,
-      background: '#252526',
-      borderRight: '1px solid #3e3e3e',
-      overflowY: 'auto',
-      flexShrink: 0,
-      display: state.sidebarOpen ? 'block' : 'none'
-    }}>
-      <div style={{
-        padding: '8px 16px',
-        color: '#888',
-        fontSize: 11,
-        textTransform: 'uppercase',
-        letterSpacing: 1
-      }}>
-        Explorer
+    <section className="sidebar-section">
+      <div className="sidebar-header">
+        <span>Folders</span>
+        <span className="add" title="Add folder">+</span>
       </div>
-      {tree.map(node => (
-        <FileTreeNode
-          key={node.path}
-          node={node}
-          depth={0}
-          gitStatuses={gitStatuses}
-          onFileClick={handleFileClick}
-        />
-      ))}
-    </div>
+      <div className="tree">
+        {tree.map(node => (
+          <FileTreeNode
+            key={node.path}
+            node={node}
+            depth={0}
+            gitStatuses={gitStatuses}
+            onFileClick={handleFileClick}
+            onFolderClick={handleFolderClick}
+          />
+        ))}
+      </div>
+    </section>
   )
 }
