@@ -3,6 +3,7 @@ import { useAutomations } from '../hooks/useAutomations'
 import Timeline from './AutomationsView/Timeline'
 import RunList from './AutomationsView/RunList'
 import AutomationForm from './AutomationsView/AutomationForm'
+import { monthToDateCost } from '../../shared/budget'
 import './AutomationsView/AutomationsView.css'
 
 interface Props { visible: boolean }
@@ -42,6 +43,10 @@ export default function AutomationsView({ visible }: Props) {
       {view === 'timeline'
         ? <Timeline automations={automations} runs={runs} onRunNow={runNow} />
         : <RunList automations={automations} runs={runs} onRunNow={runNow} onEdit={() => setFormOpen(true)} onRemove={remove} />}
+      <footer className="auto-footer">
+        💰 Month to date: ${monthToDateCost(runs).toFixed(2)}
+        {' '}across {automations.length} automation{automations.length === 1 ? '' : 's'}
+      </footer>
       {formOpen && (
         <AutomationForm
           onSubmit={async (input) => { await create(input); setFormOpen(false) }}

@@ -58,6 +58,24 @@ write_status() {
 STARTED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 write_status "running"
 
+# Budget pre-check (scheduled runs only — manual/catchup bypass)
+BUDGET=$(echo "$ENTRY" | jq -r '.monthlyBudgetUsd // empty')
+if [ -n "$BUDGET" ] && [ "$TRIGGER" = "schedule" ]; then
+  CURRENT_MONTH=$(date +%Y-%m)
+  TOTAL=$(for f in "$RUNS_DIR"/"${AUTOMATION_ID}"__*/status.json; do
+    [ -f "$f" ] || continue
+    SD=$(jq -r '.startedAt' "$f")
+    [ -z "$SD" ] && continue
+    MONTH_OF=$(echo "$SD" | cut -c1-7)
+    [ "$MONTH_OF" = "$CURRENT_MONTH" ] || continue
+    jq -r '.costUsd // 0' "$f"
+  done | awk '{s+=$1} END {print s+0}')
+  if awk -v t="$TOTAL" -v b="$BUDGET" 'BEGIN { exit !(t > b) }'; then
+    write_status "skipped_budget" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" 0 null null null "monthly budget exceeded ($TOTAL > $BUDGET)"
+    exit 0
+  fi
+fi
+
 # Dependency check: each upstream must have a completed run TODAY.
 TODAY="$(date +%Y%m%d)"
 for DEP in $DEPENDS_ON; do
