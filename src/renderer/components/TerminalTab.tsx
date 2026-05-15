@@ -61,30 +61,32 @@ export default function TerminalTab({ ptyId, visible }: Props) {
 
     const terminal = new Terminal({
       theme: {
-        background: '#FFFFFF',
+        background: '#FAFBFD',
         foreground: '#2D3748',
         cursor: '#5B8DEF',
         cursorAccent: '#FFFFFF',
-        selectionBackground: 'rgba(91, 141, 239, 0.3)',
+        selectionBackground: 'rgba(91, 141, 239, 0.18)',
         black: '#2D3748',
-        red: '#E53E3E',
-        green: '#38A169',
-        yellow: '#D69E2E',
-        blue: '#3182CE',
-        magenta: '#805AD5',
-        cyan: '#319795',
+        red: '#C97B5D',
+        green: '#4A9D7F',
+        yellow: '#D9904B',
+        blue: '#5B8DEF',
+        magenta: '#8B6FCB',
+        cyan: '#5BB1C6',
         white: '#E2E8F0',
         brightBlack: '#718096',
         brightRed: '#FC8181',
-        brightGreen: '#68D391',
-        brightYellow: '#F6AD55',
-        brightBlue: '#5B8DEF',
-        brightMagenta: '#B794F4',
-        brightCyan: '#4FD1C5',
-        brightWhite: '#F7FAFC'
+        brightGreen: '#7BC4A9',
+        brightYellow: '#E89F70',
+        brightBlue: '#7BAEF5',
+        brightMagenta: '#B07BB0',
+        brightCyan: '#83C3D2',
+        brightWhite: '#F8F9FA',
       },
-      fontFamily: "'SF Mono', Menlo, Consolas, monospace",
+      fontFamily: "'SF Mono', 'JetBrains Mono', 'Menlo', monospace",
       fontSize: 13,
+      lineHeight: 1.4,
+      letterSpacing: 0.2,
       cursorBlink: true,
       scrollback: 10000,
     })
@@ -144,7 +146,7 @@ export default function TerminalTab({ ptyId, visible }: Props) {
         width: '100%',
         height: '100%',
         display: visible ? 'block' : 'none',
-        background: '#FFFFFF',
+        background: '#FAFBFD',
         position: 'relative',
       }}
       onDragEnter={(e) => {
@@ -157,6 +159,8 @@ export default function TerminalTab({ ptyId, visible }: Props) {
         style={{
           width: '100%',
           height: '100%',
+          padding: '12px 16px',
+          boxSizing: 'border-box',
         }}
       />
       {isDragging && (
