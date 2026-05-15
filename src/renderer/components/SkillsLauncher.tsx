@@ -14,7 +14,7 @@ export function SkillsLauncher() {
     const terminalTab = state.tabs.find(t => t.type === 'terminal')
     if (terminalTab) {
       dispatch({ type: 'SET_ACTIVE_TAB', tabId: terminalTab.id })
-      window.api.sendToTerminal(terminalTab.ptyId, cmd + '\n')
+      window.api.writePty(terminalTab.ptyId!, cmd + '\n')
     }
   }
 
