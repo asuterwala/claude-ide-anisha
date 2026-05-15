@@ -433,40 +433,50 @@ export function registerIpcHandlers(): void {
           try {
             const sessionId = file.name.replace('.jsonl', '')
             const content = readFileSync(file.path, 'utf-8')
-            const lines = content.split('\n').slice(0, 50)
+            // Scan the whole file so we can pick up custom-title / ai-title entries
+            // wherever they appear, with custom-title taking precedence.
+            const lines = content.split('\n')
 
-            // Use cached summary if available
-            let title = summaryCache[sessionId]
+            let customTitle = ''
+            let aiTitle = ''
+            let firstUserMessage = ''
             let cwd = ''
 
-            // Find cwd and first user message
             for (const line of lines) {
               if (!line.trim()) continue
               try {
                 const entry = JSON.parse(line)
-                // Get cwd from any entry that has it
-                if (entry.cwd && !cwd) {
-                  cwd = entry.cwd
+                if (entry.cwd && !cwd) cwd = entry.cwd
+                // /rename slash command writes this; latest one wins
+                if (entry.type === 'custom-title' && entry.customTitle) {
+                  customTitle = String(entry.customTitle).slice(0, 80)
                 }
-                // Get first user message as title
-                if (!title && entry.type === 'user' && entry.message) {
+                // Claude's auto-generated summary
+                if (entry.type === 'ai-title' && entry.aiTitle) {
+                  aiTitle = String(entry.aiTitle).slice(0, 80)
+                }
+                // First user message (fallback)
+                if (!firstUserMessage && entry.type === 'user' && entry.message) {
                   if (typeof entry.message === 'string') {
-                    title = entry.message.slice(0, 60)
+                    firstUserMessage = entry.message.slice(0, 60)
                   } else if (entry.message.content) {
                     const msgContent = typeof entry.message.content === 'string'
                       ? entry.message.content
                       : Array.isArray(entry.message.content) && entry.message.content[0]?.text
                         ? entry.message.content[0].text
                         : ''
-                    title = msgContent.slice(0, 60)
+                    firstUserMessage = msgContent.slice(0, 60)
                   }
                 }
-                if (title && cwd) break
               } catch {}
             }
 
-            // Skip automated/programmatic sessions
-            const isAutomatedSession = title && (
+            // Priority: explicit rename > AI summary > cached > first user message
+            const title = customTitle || aiTitle || summaryCache[sessionId] || firstUserMessage
+
+            // Skip automated/programmatic sessions — but if the user explicitly
+            // renamed the session (customTitle), always keep it.
+            const isAutomatedSession = !customTitle && title && (
               title.startsWith('Summarize this') ||
               title.startsWith('Say hello') ||
               title.startsWith('In 5-8 words') ||
