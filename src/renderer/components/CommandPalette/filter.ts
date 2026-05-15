@@ -21,7 +21,7 @@ export function filterItems(items: PaletteItem[], query: string): PaletteItem[] 
   const matched = items.filter(i => {
     if (terms.length === 0) return true
     const hay = `${i.label} ${i.hint ?? ''}`.toLowerCase()
-    return terms.some(t => hay.includes(t))
+    return terms.every(t => hay.includes(t))
   })
 
   matched.sort((a, b) => KIND_RANK[a.kind] - KIND_RANK[b.kind])

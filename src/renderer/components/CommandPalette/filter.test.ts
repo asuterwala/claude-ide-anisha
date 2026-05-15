@@ -5,7 +5,7 @@ const items: PaletteItem[] = [
   { id: 'action:new', kind: 'action', label: 'New Claude chat', hint: '⌘T' },
   { id: 'folder:/x/bm', kind: 'folder', label: 'finance/benefits-model' },
   { id: 'chat:1', kind: 'chat', label: 'Refresh BI dashboard', hint: '2h' },
-  { id: 'file:/x/bm/dashboard.html', kind: 'file', label: 'dashboard.html', hint: 'benefits-model' },
+  { id: 'file:/x/bm/dashboard.html', kind: 'file', label: 'bi-dashboard.html', hint: 'benefits-model' },
   { id: 'skill:refresh-bi', kind: 'skill', label: 'refresh-fbos-bi-dash', hint: 'skill' },
 ]
 
