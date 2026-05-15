@@ -222,3 +222,54 @@
   font-size: 13px;
   margin-top: 40px;
 }
+
+/* ── List view ───────────────────────────────────────────── */
+
+.auto-list table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+}
+.auto-list th {
+  text-align: left;
+  padding: 10px 12px;
+  color: var(--text-muted);
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--border-color);
+}
+.auto-list td {
+  padding: 12px;
+  border-bottom: 1px solid var(--border-light);
+  color: var(--text-secondary);
+}
+.auto-list tr:hover td { background: rgba(91, 141, 239, 0.04); }
+.auto-list td.name { color: var(--text-primary); font-weight: 500; }
+.auto-list .badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 10px;
+}
+.auto-list .badge.done      { background: var(--accent-success); color: #2D6650; }
+.auto-list .badge.running   { background: var(--accent-warning); color: #8C4A20; }
+.auto-list .badge.failed    { background: var(--accent-error);   color: #FFF; }
+.auto-list .badge.scheduled { background: var(--accent-lavender); color: #6B3F6B; }
+.auto-list .run-btn {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-weight: 500;
+}
+.auto-list .run-btn:hover {
+  background: var(--accent-primary);
+  color: #FFF;
+  border-color: var(--accent-primary);
+}
