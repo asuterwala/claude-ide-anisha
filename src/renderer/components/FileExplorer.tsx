@@ -35,8 +35,11 @@ function FileTreeNode({ node, depth, gitStatuses, onFileClick, onFolderClick }: 
         const nodes = await window.api.readDir(node.path)
         setChildren(nodes)
       }
+      const wasExpanded = expanded
       setExpanded(!expanded)
-      onFolderClick(node.path, node.name)
+      if (!wasExpanded) {
+        onFolderClick(node.path, node.name)
+      }
     } else {
       onFileClick(node.path, node.name)
     }
