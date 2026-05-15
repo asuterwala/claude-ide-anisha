@@ -1,0 +1,111 @@
+.automations {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  overflow: hidden;
+  height: 100%;
+}
+
+.auto-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 22px 14px;
+  border-bottom: 1px solid var(--border-light);
+}
+.auto-header h2 {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.view-toggle {
+  display: inline-flex;
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+  padding: 3px;
+}
+.view-toggle button {
+  border: 0;
+  background: transparent;
+  padding: 4px 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: 6px;
+  font-weight: 500;
+}
+.view-toggle button.active {
+  background: var(--bg-secondary);
+  color: var(--accent-primary);
+  box-shadow: 0 1px 2px rgba(45,55,72,0.06);
+}
+
+.auto-stats { display: inline-flex; gap: 6px; }
+.stat-pill {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 10px;
+}
+.stat-pill.done      { background: var(--accent-success); color: #2D6650; }
+.stat-pill.running   { background: var(--accent-warning); color: #8C4A20; }
+.stat-pill.failed    { background: var(--accent-error);   color: #FFF; }
+.stat-pill.scheduled { background: var(--accent-lavender); color: #6B3F6B; }
+
+.new-auto {
+  margin-left: auto;
+  background: var(--accent-primary);
+  color: #FFF;
+  border: 0;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.new-auto:hover { background: var(--accent-primary-hover); }
+
+.auto-timeline, .auto-list {
+  flex: 1;
+  padding: 22px;
+  overflow: auto;
+  color: var(--text-secondary);
+}
+
+.form-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(45, 55, 72, 0.25);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.form {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 24px;
+  min-width: 420px;
+  box-shadow: 0 24px 60px rgba(45,55,72,0.18);
+}
+.form h3 { margin: 0 0 8px; }
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+.form-actions button {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-tertiary);
+  cursor: pointer;
+}

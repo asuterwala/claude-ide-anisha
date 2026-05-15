@@ -10,6 +10,7 @@ import { SkillsLauncher } from './components/SkillsLauncher'
 import TerminalTab from './components/TerminalTab'
 import EditorTab from './components/EditorTab'
 import Dashboard from './components/Dashboard'
+import AutomationsView from './components/AutomationsView'
 import StatusBar from './components/StatusBar'
 import Toast from './components/Toast'
 import CommandPalette from './components/CommandPalette'
@@ -172,6 +173,7 @@ export default function App() {
         </Sidebar>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <Dashboard visible={state.activeTabId === 'dashboard'} />
+          <AutomationsView visible={state.activeTabId === 'automations'} />
           {state.tabs
             .filter(t => (t.kind === 'folder-chat' || t.kind === 'standalone-chat') && t.ptyId)
             .map(tab => (
