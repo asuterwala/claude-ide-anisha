@@ -57,6 +57,11 @@ const api = {
     ipcRenderer.on('automations:run-update', handler)
     return () => { ipcRenderer.off('automations:run-update', handler) }
   },
+  onToast: (cb: (payload: { message: string }) => void) => {
+    const handler = (_: any, payload: { message: string }) => cb(payload)
+    ipcRenderer.on('toast', handler)
+    return () => { ipcRenderer.off('toast', handler) }
+  },
 }
 
 contextBridge.exposeInMainWorld('api', api)

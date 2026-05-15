@@ -159,6 +159,13 @@ export default function App() {
     }
   }
 
+  useEffect(() => {
+    const off = (window.api as any).onToast?.((payload: { message: string }) => {
+      setCurrentToast({ id: String(Date.now()), message: payload.message })
+    })
+    return () => off?.()
+  }, [])
+
   const dismissToast = useCallback(() => setCurrentToast(null), [])
 
   return (
