@@ -1,7 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useAppState } from '../store'
 
-export function SkillsLauncher() {
+interface SkillsLauncherProps {
+  compact?: boolean
+}
+
+export function SkillsLauncher({ compact }: SkillsLauncherProps = {}) {
   const { state, dispatch } = useAppState()
   const [skills, setSkills] = useState<Array<{ name: string; description: string }>>([])
 
@@ -16,6 +20,22 @@ export function SkillsLauncher() {
       dispatch({ type: 'SET_ACTIVE_TAB', tabId: terminalTab.id })
       window.api.writePty(terminalTab.ptyId!, cmd + '\n')
     }
+  }
+
+  // Placeholder — Cmd+K wiring lands in Task 11
+  const openSkillsPalette = () => {}
+
+  if (compact) {
+    return (
+      <section className="sidebar-section">
+        <div className="sidebar-header"><span>Quick Tools</span></div>
+        <div className="row" onClick={openSkillsPalette}>
+          <span className="dot"></span>
+          <span className="name">Skills</span>
+          <span className="pill">{skills.length}</span>
+        </div>
+      </section>
+    )
   }
 
   if (skills.length === 0) {

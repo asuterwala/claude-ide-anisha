@@ -4,6 +4,9 @@ import { useClaudeStatus } from './hooks/useClaudeStatus'
 import TabBar from './components/TabBar'
 import Sidebar from './components/Sidebar'
 import FileExplorer from './components/FileExplorer'
+import { RecentSessions } from './components/RecentSessions'
+import AutomationsPreview from './components/sidebar/AutomationsPreview'
+import { SkillsLauncher } from './components/SkillsLauncher'
 import TerminalTab from './components/TerminalTab'
 import EditorTab from './components/EditorTab'
 import Dashboard from './components/Dashboard'
@@ -82,6 +85,22 @@ export default function App() {
     })
   }, [dispatch])
 
+  const handleResumeSession = useCallback(async (sessionId: string, projectPath: string) => {
+    try {
+      const ptyId = await window.api.createPty(projectPath)
+      const id = `terminal-${Date.now()}`
+      dispatch({
+        type: 'ADD_TAB',
+        tab: { id, kind: 'folder-chat', label: 'Resumed chat', closeable: true, ptyId, folderPath: projectPath }
+      })
+      setTimeout(() => {
+        window.api.writePty(ptyId, `claude --resume ${sessionId}\n`)
+      }, 500)
+    } catch (err) {
+      console.error('Failed to resume session:', err)
+    }
+  }, [dispatch])
+
   const dismissToast = useCallback(() => setCurrentToast(null), [])
 
   return (
@@ -90,6 +109,9 @@ export default function App() {
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
         <Sidebar onNewChat={handleNewChat}>
           <FileExplorer />
+          <RecentSessions onResumeSession={handleResumeSession} />
+          <AutomationsPreview onOpen={() => dispatch({ type: 'SET_ACTIVE_TAB', tabId: 'automations' })} />
+          <SkillsLauncher compact />
         </Sidebar>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <Dashboard visible={state.activeTabId === 'dashboard'} />

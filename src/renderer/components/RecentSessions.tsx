@@ -10,36 +10,40 @@ interface ClaudeSession {
   timestamp: number
 }
 
-export function RecentSessions() {
-  const { state, dispatch } = useAppState()
+function relativeTime(ts: number): string {
+  const seconds = Math.floor((Date.now() - ts) / 1000)
+  if (seconds < 60) return 'now'
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}m`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h`
+  const days = Math.floor(hours / 24)
+  if (days < 7) return `${days}d`
+  const weeks = Math.floor(days / 7)
+  return `${weeks}w`
+}
+
+interface RecentSessionsProps {
+  onResumeSession?: (sessionId: string, projectPath: string) => void
+}
+
+export function RecentSessions({ onResumeSession }: RecentSessionsProps = {}) {
+  const { dispatch } = useAppState()
   const [sessions, setSessions] = useState<ClaudeSession[]>([])
-  const [limit, setLimit] = useState(5)
-  const [hasMore, setHasMore] = useState(true)
 
   useEffect(() => {
-    window.api.getClaudeSessions?.(limit).then((data: ClaudeSession[]) => {
+    window.api.getClaudeSessions?.(10).then((data: ClaudeSession[]) => {
       setSessions(data)
-      setHasMore(data.length === limit)
     }).catch(() => setSessions([]))
-  }, [limit])
-
-  const formatTimeAgo = (timestamp: number): string => {
-    const seconds = Math.floor((Date.now() - timestamp) / 1000)
-    if (seconds < 60) return 'just now'
-    const minutes = Math.floor(seconds / 60)
-    if (minutes < 60) return `${minutes}m ago`
-    const hours = Math.floor(minutes / 60)
-    if (hours < 24) return `${hours}h ago`
-    const days = Math.floor(hours / 24)
-    return `${days}d ago`
-  }
+  }, [])
 
   const handleClick = async (session: ClaudeSession) => {
+    if (onResumeSession) {
+      onResumeSession(session.id, session.projectPath)
+      return
+    }
     try {
-      // Create a PTY for the session's project
       const ptyId = await window.api.createPty(session.projectPath)
-
-      // Create terminal tab
       const id = `terminal-${Date.now()}`
       const tab: Tab = {
         id,
@@ -50,8 +54,6 @@ export function RecentSessions() {
         folderPath: session.projectPath
       }
       dispatch({ type: 'ADD_TAB', tab })
-
-      // Send resume command after a short delay for terminal to initialize
       setTimeout(() => {
         window.api.writePty(ptyId, `claude --resume ${session.id}\n`)
       }, 500)
@@ -60,98 +62,30 @@ export function RecentSessions() {
     }
   }
 
-  const loadMore = () => {
-    setLimit(prev => prev + 10)
-  }
-
-  if (sessions.length === 0) {
-    return (
-      <div style={panelStyle}>
-        <h3 style={headerStyle}>Recent Sessions</h3>
-        <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>
-          No recent sessions
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div style={panelStyle}>
-      <h3 style={headerStyle}>Recent Sessions</h3>
-      <div style={{ maxHeight: 280, overflowY: 'auto' }}>
-        {sessions.map((session) => (
+    <section className="sidebar-section">
+      <div className="sidebar-header">
+        <span>Recent Chats</span>
+        <span className="add" title="New chat">+</span>
+      </div>
+      {sessions.length === 0 ? (
+        <div className="row" style={{ color: 'var(--text-muted)' }}>
+          <span>💬</span>
+          <span className="name">No recent chats</span>
+        </div>
+      ) : (
+        sessions.slice(0, 6).map(session => (
           <div
             key={session.id}
+            className="row"
             onClick={() => handleClick(session)}
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'flex-start',
-              padding: '10px 8px',
-              marginBottom: 4,
-              borderRadius: 6,
-              cursor: 'pointer',
-              transition: 'background 0.15s'
-            }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-tertiary)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
           >
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{
-                color: 'var(--text-primary)',
-                fontSize: 13,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis'
-              }}>
-                {session.title}
-              </div>
-              <div style={{ color: 'var(--text-muted)', fontSize: 11, marginTop: 2 }}>
-                {session.projectPath.split('/').pop()}
-              </div>
-            </div>
-            <div style={{ color: 'var(--text-muted)', fontSize: 11, marginLeft: 12, flexShrink: 0 }}>
-              {formatTimeAgo(session.timestamp)}
-            </div>
+            <span>💬</span>
+            <span className="name">{session.title}</span>
+            <span className="meta">{relativeTime(session.timestamp)}</span>
           </div>
-        ))}
-        {hasMore && (
-          <button
-            onClick={loadMore}
-            style={{
-              width: '100%',
-              padding: '8px',
-              marginTop: 8,
-              background: 'transparent',
-              border: '1px solid var(--border-color)',
-              borderRadius: 6,
-              color: 'var(--text-secondary)',
-              fontSize: 12,
-              cursor: 'pointer',
-              transition: 'background 0.15s'
-            }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-tertiary)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-          >
-            Load more
-          </button>
-        )}
-      </div>
-    </div>
+        ))
+      )}
+    </section>
   )
-}
-
-const panelStyle = {
-  background: 'var(--bg-secondary)',
-  borderRadius: 8,
-  padding: 16,
-  border: '1px solid var(--border-color)',
-  boxShadow: '0 1px 3px rgba(45, 55, 72, 0.05)'
-}
-
-const headerStyle = {
-  margin: '0 0 12px',
-  color: 'var(--text-primary)',
-  fontSize: 14,
-  fontWeight: 600
 }
