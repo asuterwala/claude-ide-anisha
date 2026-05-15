@@ -61,7 +61,7 @@ export default function TerminalTab({ ptyId, visible }: Props) {
 
     const terminal = new Terminal({
       theme: {
-        background: '#FAFBFD',
+        background: '#F3EDF8',           // lavender wash
         foreground: '#2D3748',
         cursor: '#5B8DEF',
         cursorAccent: '#FFFFFF',
@@ -83,7 +83,7 @@ export default function TerminalTab({ ptyId, visible }: Props) {
         brightCyan: '#83C3D2',
         brightWhite: '#F8F9FA',
       },
-      fontFamily: "'SF Mono', 'JetBrains Mono', 'Menlo', monospace",
+      fontFamily: "'iA Writer Mono S', 'SF Mono', 'JetBrains Mono', 'Menlo', monospace",
       fontSize: 13,
       lineHeight: 1.4,
       letterSpacing: 0.2,
@@ -146,7 +146,7 @@ export default function TerminalTab({ ptyId, visible }: Props) {
         width: '100%',
         height: '100%',
         display: visible ? 'block' : 'none',
-        background: '#FAFBFD',
+        background: '#F3EDF8',
         position: 'relative',
       }}
       onDragEnter={(e) => {
