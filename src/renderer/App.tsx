@@ -161,7 +161,7 @@ export default function App() {
   const dismissToast = useCallback(() => setCurrentToast(null), [])
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#1e1e1e' }}>
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: 'transparent' }}>
       <TabBar />
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
         <Sidebar onNewChat={handleNewChat}>
