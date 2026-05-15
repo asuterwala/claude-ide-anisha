@@ -50,12 +50,17 @@ html, body, #root {
   height: var(--tab-height);
   display: flex;
   align-items: center;
-  padding: 0 8px;
+  padding: 0 8px 0 80px; /* 80px left reserves space for macOS traffic lights */
   gap: 4px;
   background: rgba(255, 255, 255, 0.65);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border-subtle);
+  -webkit-app-region: drag; /* Whole tab bar is window-drag region (except tabs themselves) */
+}
+.tabs .tab,
+.tabs .folder-chip {
+  -webkit-app-region: no-drag;
 }
 .tab {
   height: 28px;
