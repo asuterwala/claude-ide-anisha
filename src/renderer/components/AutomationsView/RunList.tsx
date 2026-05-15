@@ -4,7 +4,6 @@ interface Props {
   automations: Automation[]
   runs: Run[]
   onRunNow: (id: string) => void
-  onEdit: (a: Automation) => void
   onRemove: (id: string) => void
 }
 

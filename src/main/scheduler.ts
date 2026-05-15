@@ -13,7 +13,14 @@ import { app } from 'electron'
 
 const execFileP = promisify(execFile)
 
-const SCRIPT_SRC = join(app.getAppPath(), 'scripts/run-automation')
+function scriptSrc(): string {
+  // In production (packaged), the script is at process.resourcesPath/run-automation.
+  // In dev, it's at <repo>/scripts/run-automation.
+  if (app.isPackaged) {
+    return join(process.resourcesPath, 'run-automation')
+  }
+  return join(app.getAppPath(), 'scripts/run-automation')
+}
 
 async function ensureScaffolding(): Promise<void> {
   await fs.mkdir(CLAUDE_IDE_DIR, { recursive: true })
@@ -26,14 +33,15 @@ async function ensureScaffolding(): Promise<void> {
   await fs.writeFile(ENV_CONFIG_FILE, JSON.stringify(env, null, 2))
 
   try {
-    const srcStat = await fs.stat(SCRIPT_SRC)
+    const src = scriptSrc()
+    const srcStat = await fs.stat(src)
     let needsCopy = true
     try {
       const dstStat = await fs.stat(RUN_AUTOMATION_SCRIPT)
       if (dstStat.mtimeMs >= srcStat.mtimeMs) needsCopy = false
     } catch {}
     if (needsCopy) {
-      await fs.copyFile(SCRIPT_SRC, RUN_AUTOMATION_SCRIPT)
+      await fs.copyFile(src, RUN_AUTOMATION_SCRIPT)
       await fs.chmod(RUN_AUTOMATION_SCRIPT, 0o755)
     }
   } catch (err) {

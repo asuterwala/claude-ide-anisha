@@ -15,6 +15,7 @@ declare global {
       listRuns(opts?: { sinceDate?: Date; automationId?: string }): Promise<Run[]>
       onRunUpdate(cb: (run: Run) => void): () => void
       getSkills(): Promise<Skill[]>
+      onToast(cb: (t: { message: string }) => void): () => void
     }
   }
 }

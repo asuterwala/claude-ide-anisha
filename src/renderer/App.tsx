@@ -102,7 +102,8 @@ export default function App() {
     try {
       const sessions = await window.api.getRecentSessions?.() ?? []
       for (const s of sessions.slice(0, 20)) {
-        items.push({ id: `chat:${s.id}`, kind: 'chat', label: s.title ?? 'Untitled', hint: relativeTime(s.startedAt), meta: s })
+        const name = s.projectPath.split('/').filter(Boolean).pop() ?? s.projectPath
+        items.push({ id: `chat:${s.projectPath}`, kind: 'chat', label: name, hint: relativeTime(s.lastOpened), meta: s })
       }
     } catch {}
     // Skills (best-effort)
@@ -152,15 +153,15 @@ export default function App() {
     if (item.kind === 'action' && item.id === 'action:new-chat') {
       handleNewChat()
     } else if (item.kind === 'chat' && item.meta) {
-      const session = item.meta as any
-      handleResumeSession(session.id, session.projectPath ?? '')
+      const session = item.meta as import('../shared/types').RecentSession
+      handleResumeSession(session.projectPath, session.projectPath)
     } else if (item.kind === 'skill') {
       // Future: send /skill to active terminal. For MVP, just close.
     }
   }
 
   useEffect(() => {
-    const off = (window.api as any).onToast?.((payload: { message: string }) => {
+    const off = window.api.onToast((payload: { message: string }) => {
       setCurrentToast({ id: String(Date.now()), message: payload.message })
     })
     return () => off?.()

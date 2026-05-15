@@ -42,7 +42,7 @@ export default function AutomationsView({ visible }: Props) {
       </header>
       {view === 'timeline'
         ? <Timeline automations={automations} runs={runs} onRunNow={runNow} />
-        : <RunList automations={automations} runs={runs} onRunNow={runNow} onEdit={() => setFormOpen(true)} onRemove={remove} />}
+        : <RunList automations={automations} runs={runs} onRunNow={runNow} onRemove={remove} />}
       <footer className="auto-footer">
         💰 Month to date: ${monthToDateCost(runs).toFixed(2)}
         {' '}across {automations.length} automation{automations.length === 1 ? '' : 's'}
