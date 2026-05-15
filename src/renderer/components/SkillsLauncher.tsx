@@ -22,8 +22,10 @@ export function SkillsLauncher({ compact }: SkillsLauncherProps = {}) {
     }
   }
 
-  // Placeholder — Cmd+K wiring lands in Task 11
-  const openSkillsPalette = () => {}
+  const openSkillsPalette = () => {
+    // Synthesize Cmd+K so App.tsx's existing palette listener opens it.
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }))
+  }
 
   if (compact) {
     return (
