@@ -1,20 +1,21 @@
 :root {
-  /* Backgrounds */
+  /* Backgrounds (kept from your theme) */
   --bg-primary: #F8F9FA;
   --bg-secondary: #FFFFFF;
   --bg-tertiary: #EDF2F7;
-  --bg-code: #EDF2F7;
+  --bg-code: #FAFBFD;
 
   /* Borders */
   --border-color: #E2E8F0;
   --border-light: #F0F4F8;
+  --border-subtle: rgba(45, 55, 72, 0.06);
 
   /* Text */
   --text-primary: #2D3748;
   --text-secondary: #718096;
   --text-muted: #A0AEC0;
 
-  /* Accents */
+  /* Accents (kept from your theme) */
   --accent-primary: #5B8DEF;
   --accent-primary-hover: #4A7DD9;
   --accent-success: #C2E5DF;
@@ -22,18 +23,17 @@
   --accent-error: #FC8181;
   --accent-lavender: #F3D4F3;
   --accent-pink: #FFD1D3;
+  --accent-mint: #C2E5DF;
 
-  /* Panels */
-  --panel-bg: #FFFFFF;
-  --panel-border: #E2E8F0;
-  --panel-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  /* Syntax (soft pastel-on-cream) */
+  --syn-keyword: #8B6FCB;     /* lavender */
+  --syn-string: #4A9D7F;      /* sage */
+  --syn-number: #C97B5D;      /* peach */
+  --syn-comment: #A0AEC0;     /* muted */
+  --syn-tag: #5B8DEF;         /* primary */
+  --syn-attr: #C97B5D;        /* peach */
 
-  /* Interactive */
-  --hover-bg: #F0F4F8;
-  --active-bg: #E2E8F0;
-
-  /* Terminal */
-  --terminal-bg: #FFFFFF;
-  --terminal-text: #2D3748;
-  --terminal-cursor: #5B8DEF;
+  --titlebar-height: 38px;
+  --tab-height: 38px;
+  --statusbar-height: 26px;
 }
