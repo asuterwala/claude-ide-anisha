@@ -58,11 +58,11 @@ export default function App() {
             type: 'ADD_TAB',
             tab: {
               id,
-              type: 'terminal',
-              label: `Terminal ${state.tabs.filter(t => t.type === 'terminal').length + 1}`,
+              kind: 'folder-chat',
+              label: `Terminal ${state.tabs.filter(t => t.kind === 'folder-chat' || t.kind === 'standalone-chat').length + 1}`,
               closeable: true,
               ptyId,
-              projectPath: projectPath ?? undefined
+              folderPath: projectPath ?? undefined
             }
           })
         })
@@ -82,7 +82,7 @@ export default function App() {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <Dashboard visible={state.activeTabId === 'dashboard'} />
           {state.tabs
-            .filter(t => t.type === 'terminal' && t.ptyId)
+            .filter(t => (t.kind === 'folder-chat' || t.kind === 'standalone-chat') && t.ptyId)
             .map(tab => (
               <TerminalTab
                 key={tab.id}
@@ -91,7 +91,7 @@ export default function App() {
               />
             ))}
           {state.tabs
-            .filter(t => t.type === 'editor' && t.filePath)
+            .filter(t => t.kind === 'file' && t.filePath)
             .map(tab => (
               <EditorTab
                 key={tab.id}

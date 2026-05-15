@@ -1,13 +1,18 @@
-export type TabType = 'dashboard' | 'terminal' | 'editor'
+export type TabKind =
+  | 'standalone-chat'
+  | 'folder-chat'
+  | 'file'
+  | 'dashboard'
+  | 'automations'
 
 export interface Tab {
   id: string
-  type: TabType
+  kind: TabKind
   label: string
   closeable: boolean
-  ptyId?: string
-  projectPath?: string
-  filePath?: string
+  folderPath?: string  // present for folder-chat, file (when folder-tied)
+  filePath?: string    // present for kind === 'file'
+  ptyId?: string       // present for kind === 'standalone-chat' | 'folder-chat'
   isDirty?: boolean
 }
 

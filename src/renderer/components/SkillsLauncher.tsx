@@ -11,7 +11,7 @@ export function SkillsLauncher() {
 
   const executeSkill = (skillName: string) => {
     const cmd = `/${skillName}`
-    const terminalTab = state.tabs.find(t => t.type === 'terminal')
+    const terminalTab = state.tabs.find(t => t.kind === 'folder-chat' || t.kind === 'standalone-chat')
     if (terminalTab) {
       dispatch({ type: 'SET_ACTIVE_TAB', tabId: terminalTab.id })
       window.api.writePty(terminalTab.ptyId!, cmd + '\n')

@@ -39,7 +39,7 @@ type Action =
 
 const dashboardTab: Tab = {
   id: 'dashboard',
-  type: 'dashboard',
+  kind: 'dashboard',
   label: 'Dashboard',
   closeable: false
 }
@@ -64,7 +64,7 @@ function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
     case 'ADD_TAB': {
       const newState = { ...state, tabs: [...state.tabs, action.tab], activeTabId: action.tab.id }
-      if (action.tab.type === 'terminal' && !state.behavior.firstTerminalAt) {
+      if ((action.tab.kind === 'folder-chat' || action.tab.kind === 'standalone-chat') && !state.behavior.firstTerminalAt) {
         newState.behavior = { ...state.behavior, firstTerminalAt: Date.now() }
       }
       return newState

@@ -43,11 +43,11 @@ export function RecentSessions() {
       const id = `terminal-${Date.now()}`
       const tab: Tab = {
         id,
-        type: 'terminal',
+        kind: 'folder-chat',
         label: session.title.slice(0, 25) + (session.title.length > 25 ? '...' : ''),
         closeable: true,
         ptyId,
-        projectPath: session.projectPath
+        folderPath: session.projectPath
       }
       dispatch({ type: 'ADD_TAB', tab })
 

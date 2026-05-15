@@ -1,10 +1,12 @@
 import { useAppState } from '../store'
-import type { Tab, TabType } from '../../shared/types'
+import type { Tab, TabKind } from '../../shared/types'
 
-const tabColors: Record<TabType, string> = {
+const tabColors: Record<TabKind, string> = {
   dashboard: '#89d185',
-  terminal: '#4fc1ff',
-  editor: '#dcdcaa'
+  'folder-chat': '#4fc1ff',
+  'standalone-chat': '#4fc1ff',
+  file: '#dcdcaa',
+  automations: '#c586c0'
 }
 
 export default function TabBar() {
@@ -17,11 +19,11 @@ export default function TabBar() {
       const ptyId = await window.api.createPty(projectPath)
       const tab: Tab = {
         id,
-        type: 'terminal',
-        label: `Terminal ${state.tabs.filter(t => t.type === 'terminal').length + 1}`,
+        kind: 'folder-chat',
+        label: `Terminal ${state.tabs.filter(t => t.kind === 'folder-chat' || t.kind === 'standalone-chat').length + 1}`,
         closeable: true,
         ptyId,
-        projectPath: projectPath ?? undefined
+        folderPath: projectPath ?? undefined
       }
       dispatch({ type: 'ADD_TAB', tab })
     } catch (err) {
@@ -65,7 +67,7 @@ export default function TabBar() {
             WebkitAppRegion: 'no-drag' as any,
           }}
         >
-          <span style={{ color: tabColors[tab.type], fontSize: 10 }}>●</span>
+          <span style={{ color: tabColors[tab.kind], fontSize: 10 }}>●</span>
           {tab.label}
           {tab.isDirty && <span style={{ color: 'var(--accent-primary)' }}>●</span>}
           {tab.closeable && (

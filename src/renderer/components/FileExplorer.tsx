@@ -106,7 +106,7 @@ export default function FileExplorer() {
 
     const tab: Tab = {
       id: `editor-${Date.now()}`,
-      type: 'editor',
+      kind: 'file',
       label: fileName,
       closeable: true,
       filePath
