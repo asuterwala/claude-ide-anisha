@@ -28,10 +28,10 @@ export interface FileNode {
 export type GitFileStatus = 'modified' | 'untracked' | 'deleted' | 'added' | 'renamed' | null
 
 export interface ClaudeStatus {
-  model: string | null
-  cost: string | null
-  tokens: string | null
-  context: string | null
+  model: string | null      // e.g. "Opus 4.7"
+  cost: number | null        // dollars
+  tokens: number | null      // total tokens used
+  context: { used: number; pct: number } | null
 }
 
 export interface RecentSession {

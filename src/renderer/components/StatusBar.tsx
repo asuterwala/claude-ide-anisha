@@ -1,59 +1,44 @@
 import { useAppState } from '../store'
 
+function formatTokens(n: number | null): string {
+  if (n === null) return '—'
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`
+  return String(n)
+}
+
+function formatCost(n: number | null): string {
+  if (n === null) return '—'
+  return `$${n.toFixed(2)}`
+}
+
+function getFolderBasename(p: string | null): string {
+  if (!p) return '—'
+  const parts = p.split('/').filter(Boolean)
+  return parts[parts.length - 1] ?? p
+}
+
 export default function StatusBar() {
   const { state } = useAppState()
-  const { model, cost, tokens, context } = state.claudeStatus
-
+  const { gitBranch, projectPath, claudeStatus } = state
   return (
-    <div style={{
-      background: 'var(--bg-secondary)',
-      borderTop: '1px solid var(--border-color)',
-      padding: '6px 16px',
-      display: 'flex',
-      justifyContent: 'space-between',
-      fontSize: 12,
-      color: 'var(--text-secondary)',
-      flexShrink: 0,
-      fontFamily: "'SF Mono', Menlo, monospace"
-    }}>
-      <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-        {/* Project */}
-        <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
-          {state.projectPath?.split('/').pop() || 'No Project'}
-        </span>
-
-        {/* Branch */}
-        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <span style={{ color: 'var(--accent-primary)' }}>⎇</span>
-          {state.gitBranch || '—'}
-        </span>
-      </div>
-
-      <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-        {/* Model */}
-        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <span style={{ color: '#C2E5DF' }}>✦</span>
-          {model || '—'}
-        </span>
-
-        {/* Tokens */}
-        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <span style={{ color: '#F3D4F3' }}>§</span>
-          {tokens || '—'}
-        </span>
-
-        {/* Cost */}
-        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <span style={{ color: '#FFCAA4' }}>◎</span>
-          {cost || '—'}
-        </span>
-
-        {/* Context */}
-        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <span style={{ color: '#FFD1D3' }}>◐</span>
-          {context || '—'}
-        </span>
-      </div>
+    <div className="statusbar">
+      <span className="grp">⎇ <span className="accent">{gitBranch ?? '—'}</span></span>
+      <span className="sep">·</span>
+      <span className="grp">📂 {getFolderBasename(projectPath)}</span>
+      <span className="sep">·</span>
+      <span className="grp">
+        ✻ <span className="accent">{claudeStatus.model ?? '—'}</span>
+      </span>
+      <span className="sep">·</span>
+      <span className="grp">§ <span className="ok">{formatTokens(claudeStatus.tokens)} tokens</span></span>
+      <span className="sep">·</span>
+      <span className="grp">$ <span className="warn">{formatCost(claudeStatus.cost)}</span></span>
+      <span className="sep">·</span>
+      <span className="grp">
+        ⌛ <span className="accent">{claudeStatus.context?.used ?? '—'}</span>
+        <span style={{ color: 'var(--text-muted)' }}> ({claudeStatus.context?.pct ?? '—'}%)</span>
+      </span>
     </div>
   )
 }
