@@ -13,6 +13,7 @@ declare global {
       removeAutomation(id: string): Promise<void>
       runAutomationNow(id: string): Promise<string>
       listRuns(opts?: { sinceDate?: Date; automationId?: string }): Promise<Run[]>
+      onRunUpdate(cb: (run: Run) => void): () => void
     }
   }
 }

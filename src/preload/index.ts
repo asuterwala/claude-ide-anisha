@@ -51,6 +51,11 @@ const api = {
   removeAutomation: (id: string) => ipcRenderer.invoke('automations:remove', id),
   runAutomationNow: (id: string) => ipcRenderer.invoke('automations:runNow', id),
   listRuns: (opts?: any) => ipcRenderer.invoke('automations:listRuns', opts),
+  onRunUpdate: (cb: (run: any) => void) => {
+    const handler = (_: any, run: any) => cb(run)
+    ipcRenderer.on('automations:run-update', handler)
+    return () => { ipcRenderer.off('automations:run-update', handler) }
+  },
 }
 
 contextBridge.exposeInMainWorld('api', api)

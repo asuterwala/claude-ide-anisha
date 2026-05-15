@@ -4,6 +4,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { registerIpcHandlers } from './ipc-handlers'
 import { destroyAllPtySessions } from './claude-bridge'
 import { scheduler } from './scheduler'
+import { startRunsWatcher, stopRunsWatcher } from './scheduler/runs-watcher'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -50,6 +51,7 @@ app.whenReady().then(async () => {
 
   registerIpcHandlers()
   mainWindow = createWindow()
+  startRunsWatcher(mainWindow)
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -61,6 +63,8 @@ app.whenReady().then(async () => {
 app.on('before-quit', () => {
   destroyAllPtySessions()
 })
+
+app.on('will-quit', stopRunsWatcher)
 
 app.on('window-all-closed', () => {
   app.quit()
