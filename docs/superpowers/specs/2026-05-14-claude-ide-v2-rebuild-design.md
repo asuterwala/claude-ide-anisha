@@ -132,6 +132,39 @@ New methods on `window.api`:
 - `onRunUpdate(handler: (run: Run) => void): UnsubscribeFn` — chokidar-backed stream.
 - `getSkills(): Promise<Skill[]>` — for the "+ New Automation" form's skill dropdown. Reads from existing skills auto-detection logic.
 
+## Claude CLI environment under launchd
+
+When `launchd` invokes a script, it does **not** inherit your shell's environment. The script must explicitly provide what `claude` needs to authenticate and run.
+
+**Current auth (confirmed 2026-05-14):**
+- Method: Claude.ai first-party login (post-Bedrock migration).
+- Auth state stored in `~/.claude/auth-cache.json`. `claude` reads it directly — no env vars, AWS profile, or API key required.
+- `claude` binary: `/Users/anisha.suterwala/.local/bin/claude`.
+- Old Bedrock vars (`CLAUDE_CODE_USE_BEDROCK`, `AWS_PROFILE`, `AWS_REGION`, `ANTHROPIC_MODEL`, `ANTHROPIC_DEFAULT_OPUS_MODEL`, `awsAuthRefresh`) were intentionally removed and are no longer used.
+
+**Plist environment requirements (minimum):**
+- `HOME=/Users/anisha.suterwala` — required so `claude` can read `~/.claude/`.
+- `PATH` must contain the directory holding `claude` (currently `/Users/anisha.suterwala/.local/bin`). Plists include a curated PATH rather than inheriting the shell's.
+- `CLAUDE_CODE_USE_BEDROCK=false` — set defensively for explicitness, even though it's the current default.
+
+**One-time setup step:** On first launch of v2, the scheduler module verifies the `claude` binary path and writes it (plus `HOME` and `PATH`) into a `~/.claude-ide/env.json` config file. All generated plists template their `EnvironmentVariables` block from that file. If the `claude` binary moves (e.g., user reinstalls), the IDE re-detects and rewrites every plist.
+
+**Re-auth handling:** if `claude` returns an auth error (token expired), the run is marked `failed: auth_required` and a Toast in the IDE prompts the user to run `claude` interactively once to refresh the session. Until that happens, the IDE pauses launchd registration of new automations (existing ones still fire but will fail the same way).
+
+## Cost guardrails
+
+Scheduled Opus runs can add up. The Automations view surfaces cost visibility and a soft budget warning.
+
+**Per-automation budget (optional field):**
+- `monthlyBudgetUsd` on each automation entry (default: `null`, no cap).
+- After each run, the scheduler sums month-to-date cost from `runs/` for that automation. If the run pushes total over `monthlyBudgetUsd × 0.8`, surface a warning Toast. If over 100%, the next scheduled run is **skipped** (status: `skipped_budget`) until the calendar month rolls over. Manual "Run now" still works (with confirmation) — never silently blocked.
+
+**Global overview:**
+- A small footer in the Automations view shows month-to-date automation spend (e.g., "$23.40 this month across 8 automations"). Click to expand a breakdown by automation.
+- Optional global `monthlyBudgetUsd` in `~/.claude-ide/env.json`. Warning-only (no hard stop) since the user is the only operator.
+
+**Visibility on the timeline:** Run blocks have a tooltip showing `$X.XX · N tokens` so the user can see cost per run at a glance.
+
 ## Error handling
 
 - **launchctl failure** (e.g. plist invalid): scheduler surfaces the error via IPC; UI shows a Toast and marks the automation as disabled with a tooltip explaining why.
