@@ -7,7 +7,9 @@
     "postinstall": "chmod +x node_modules/node-pty/prebuilds/darwin-arm64/spawn-helper 2>/dev/null || true",
     "dev": "electron-vite dev",
     "build": "electron-vite build",
-    "package": "chmod +x node_modules/node-pty/prebuilds/darwin-arm64/spawn-helper && electron-vite build && electron-builder --mac"
+    "package": "chmod +x node_modules/node-pty/prebuilds/darwin-arm64/spawn-helper && electron-vite build && electron-builder --mac",
+    "test": "vitest",
+    "test:run": "vitest run"
   },
   "dependencies": {
     "chokidar": "^4.0.0",
@@ -17,17 +19,23 @@
     "@electron-toolkit/preload": "^3.0.0",
     "@electron-toolkit/utils": "^3.0.0",
     "@monaco-editor/react": "^4.6.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^25.8.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.0",
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/xterm": "^5.5.0",
     "electron": "^33.0.0",
     "electron-builder": "^25.0.0",
     "electron-vite": "^2.3.0",
+    "jsdom": "^29.1.1",
     "monaco-editor": "^0.50.0",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "typescript": "^5.5.0",
-    "@types/react": "^18.3.0",
-    "@types/react-dom": "^18.3.0"
+    "vitest": "^4.1.6"
   }
 }
