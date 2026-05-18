@@ -118,12 +118,12 @@ export function registerIpcHandlers(): void {
     await saveRecentSessions(sessions)
   })
 
-  ipcMain.handle('pty:create', async (event, projectPath: string) => {
+  ipcMain.handle('pty:create', async (event, projectPath: string, opts?: { resumeSessionId?: string }) => {
     const window = BrowserWindow.fromWebContents(event.sender)
     if (!window) throw new Error('No window found')
     try {
-      const id = createPtySession(projectPath, window)
-      console.log('[pty:create] Success, id:', id)
+      const id = createPtySession(projectPath, window, opts ?? {})
+      console.log('[pty:create] Success, id:', id, opts?.resumeSessionId ? `(resuming ${opts.resumeSessionId})` : '')
       return id
     } catch (err) {
       console.error('[pty:create] Error:', err)

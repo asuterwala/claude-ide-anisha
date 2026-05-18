@@ -9,7 +9,15 @@ interface PtySession {
 const sessions = new Map<string, PtySession>()
 let nextId = 1
 
-export function createPtySession(projectPath: string | null, window: BrowserWindow): string {
+export interface PtyOptions {
+  resumeSessionId?: string
+}
+
+export function createPtySession(
+  projectPath: string | null,
+  window: BrowserWindow,
+  opts: PtyOptions = {}
+): string {
   const id = `pty-${nextId++}`
   const shell = process.env.SHELL || '/bin/zsh'
 
@@ -26,9 +34,12 @@ export function createPtySession(projectPath: string | null, window: BrowserWind
     }
   })
 
-  // Auto-launch claude after shell starts
+  // Auto-launch claude after shell starts (resume previous session if provided)
+  const launchCmd = opts.resumeSessionId
+    ? `claude --resume ${opts.resumeSessionId}\r`
+    : 'claude\r'
   setTimeout(() => {
-    ptyProcess.write('claude\r')
+    ptyProcess.write(launchCmd)
   }, 500)
 
   ptyProcess.onData((data) => {

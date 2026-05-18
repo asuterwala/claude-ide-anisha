@@ -43,7 +43,7 @@ export function RecentSessions({ onResumeSession }: RecentSessionsProps = {}) {
       return
     }
     try {
-      const ptyId = await window.api.createPty(session.projectPath)
+      const ptyId = await window.api.createPty(session.projectPath, { resumeSessionId: session.id })
       const id = `terminal-${Date.now()}`
       const tab: Tab = {
         id,
@@ -54,9 +54,6 @@ export function RecentSessions({ onResumeSession }: RecentSessionsProps = {}) {
         folderPath: session.projectPath
       }
       dispatch({ type: 'ADD_TAB', tab })
-      setTimeout(() => {
-        window.api.writePty(ptyId, `claude --resume ${session.id}\n`)
-      }, 500)
     } catch (err) {
       console.error('Failed to open session:', err)
     }

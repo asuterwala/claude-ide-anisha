@@ -135,15 +135,12 @@ export default function App() {
 
   const handleResumeSession = useCallback(async (sessionId: string, projectPath: string) => {
     try {
-      const ptyId = await window.api.createPty(projectPath)
+      const ptyId = await window.api.createPty(projectPath, { resumeSessionId: sessionId })
       const id = `terminal-${Date.now()}`
       dispatch({
         type: 'ADD_TAB',
         tab: { id, kind: 'folder-chat', label: 'Resumed chat', closeable: true, ptyId, folderPath: projectPath }
       })
-      setTimeout(() => {
-        window.api.writePty(ptyId, `claude --resume ${sessionId}\n`)
-      }, 500)
     } catch (err) {
       console.error('Failed to resume session:', err)
     }
