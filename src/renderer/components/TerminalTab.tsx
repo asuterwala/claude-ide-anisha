@@ -107,9 +107,17 @@ export default function TerminalTab({ ptyId, visible }: Props) {
         (e.key === 'L' || e.key === 'l')
       ) {
         e.preventDefault()
-        try { terminal.clear() } catch {}
+        // Full reset wipes the entire terminal (scrollback + viewport).
+        try { terminal.reset() } catch {}
         try { fitAddon.fit() } catch {}
-        try { window.api.writePty(ptyId, '\x0c') } catch {}
+        // Force claude to redraw by triggering a SIGWINCH via a tiny resize +
+        // immediate revert. The PTY resize fires onResize → resizePty → SIGWINCH.
+        try {
+          const cols = terminal.cols
+          const rows = terminal.rows
+          window.api.resizePty(ptyId, Math.max(1, cols - 1), rows)
+          setTimeout(() => window.api.resizePty(ptyId, cols, rows), 30)
+        } catch {}
         return false
       }
       return true
@@ -169,11 +177,15 @@ export default function TerminalTab({ ptyId, visible }: Props) {
           try { fitAddonRef.current?.fit() } catch {}
           const newCols = terminalRef.current?.cols ?? 0
           // If the resize was substantial, the scrollback was wrapped at the
-          // wrong width and looks like vertical spaghetti. Clear it and ask
-          // claude to redraw via form-feed (Ctrl+L).
+          // wrong width and looks like vertical spaghetti. Full reset and force
+          // claude to repaint via a SIGWINCH (resize-jiggle).
           if (oldCols > 0 && Math.abs(newCols - oldCols) >= Math.max(20, oldCols * 0.3)) {
-            try { terminalRef.current?.clear() } catch {}
-            try { window.api.writePty(ptyId, '\x0c') } catch {}
+            try { terminalRef.current?.reset() } catch {}
+            try {
+              const rows = terminalRef.current?.rows ?? 30
+              window.api.resizePty(ptyId, Math.max(1, newCols - 1), rows)
+              setTimeout(() => window.api.resizePty(ptyId, newCols, rows), 30)
+            } catch {}
           }
         }
       })
