@@ -135,7 +135,7 @@ export default function TerminalTab({ ptyId, visible }: Props) {
   }, [ptyId, checkAndNotify])
 
   useEffect(() => {
-    if (!visible || !fitAddonRef.current || !containerRef.current) return
+    if (!visible || !fitAddonRef.current || !containerRef.current || !terminalRef.current) return
     // Two RAFs: first lets layout apply (display:none → display:block),
     // second lets the browser measure so getBoundingClientRect is correct.
     // Without this, fit() reads width=0 and resizes the terminal to ~10 cols.
@@ -146,7 +146,16 @@ export default function TerminalTab({ ptyId, visible }: Props) {
         if (cancelled) return
         const rect = containerRef.current?.getBoundingClientRect()
         if (rect && rect.width > 20 && rect.height > 20) {
+          const oldCols = terminalRef.current?.cols ?? 0
           try { fitAddonRef.current?.fit() } catch {}
+          const newCols = terminalRef.current?.cols ?? 0
+          // If the resize was substantial, the scrollback was wrapped at the
+          // wrong width and looks like vertical spaghetti. Clear it and ask
+          // claude to redraw via form-feed (Ctrl+L).
+          if (oldCols > 0 && Math.abs(newCols - oldCols) >= Math.max(20, oldCols * 0.3)) {
+            try { terminalRef.current?.clear() } catch {}
+            try { window.api.writePty(ptyId, '\x0c') } catch {}
+          }
         }
       })
     })
@@ -154,7 +163,21 @@ export default function TerminalTab({ ptyId, visible }: Props) {
       cancelled = true
       cancelAnimationFrame(raf1)
     }
-  }, [visible])
+  }, [visible, ptyId])
+
+  // Cmd+Shift+L manual redraw — backup if auto-clean didn't fire.
+  useEffect(() => {
+    if (!visible) return
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 'l' || e.key === 'L')) {
+        e.preventDefault()
+        try { terminalRef.current?.clear() } catch {}
+        try { window.api.writePty(ptyId, '\x0c') } catch {}
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [visible, ptyId])
 
   return (
     <div
