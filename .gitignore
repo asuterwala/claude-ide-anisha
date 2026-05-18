@@ -20,3 +20,8 @@ npm-debug.log*
 # Environment
 .env
 .env.local
+
+# Local caches / stray bundler artifacts
+calendar-cache.json
+tasks-cache.json
+index-*.js
