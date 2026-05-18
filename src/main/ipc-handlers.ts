@@ -541,6 +541,82 @@ export function registerIpcHandlers(): void {
     return { success: true }
   })
 
+  // Find the title (custom-title or ai-title) of an active session for a given folder.
+  // Used by the renderer's title-poll to update tab labels when claude assigns a name.
+  ipcMain.handle('claudeSessions:findTitle', async (
+    _event,
+    folderPath: string,
+    sinceMs: number = 0,
+    excludeIds: string[] = [],
+    pinnedSessionId?: string
+  ) => {
+    try {
+      // Empty folderPath means "home directory".
+      const resolvedFolder = folderPath && folderPath.length > 0 ? folderPath : homedir()
+      const projectDir = resolvedFolder.replace(/^\//, '').replace(/\//g, '-')
+      const projectDirWithDash = projectDir.startsWith('-') ? projectDir : `-${projectDir}`
+      const candidates = [
+        join(CLAUDE_PROJECTS_PATH, projectDirWithDash),
+        join(CLAUDE_PROJECTS_PATH, projectDir),
+      ]
+      let dir: string | null = null
+      for (const c of candidates) {
+        if (existsSync(c)) { dir = c; break }
+      }
+      if (!dir) return null
+
+      const exclude = new Set(excludeIds)
+      const files = readdirSync(dir)
+        .filter(f => f.endsWith('.jsonl'))
+        .map(f => ({
+          sessionId: f.replace('.jsonl', ''),
+          path: join(dir!, f),
+          mtime: statSync(join(dir!, f)).mtimeMs,
+        }))
+        .sort((a, b) => b.mtime - a.mtime)
+
+      const scanForTitle = (filePath: string): string | null => {
+        try {
+          const content = readFileSync(filePath, 'utf-8')
+          const lines = content.split('\n')
+          let custom = ''
+          let ai = ''
+          for (const line of lines) {
+            if (!line.trim()) continue
+            try {
+              const entry = JSON.parse(line)
+              if (entry.type === 'custom-title' && entry.customTitle) custom = String(entry.customTitle).slice(0, 80)
+              else if (entry.type === 'ai-title' && entry.aiTitle) ai = String(entry.aiTitle).slice(0, 80)
+            } catch {}
+          }
+          return custom || ai || null
+        } catch { return null }
+      }
+
+      // If the renderer pinned a specific session for this tab, re-scan it first.
+      if (pinnedSessionId) {
+        const pinned = files.find(f => f.sessionId === pinnedSessionId)
+        if (pinned) {
+          const title = scanForTitle(pinned.path)
+          if (title) return { sessionId: pinned.sessionId, title }
+        }
+      }
+
+      // Otherwise find the most recent JSONL modified since this tab was opened,
+      // not already claimed by another tab, that has a title.
+      for (const f of files) {
+        if (f.mtime < sinceMs - 60 * 1000) break  // 60s grace before tab creation
+        if (exclude.has(f.sessionId)) continue
+        const title = scanForTitle(f.path)
+        if (title) return { sessionId: f.sessionId, title }
+      }
+      return null
+    } catch (err) {
+      console.error('findTitle error:', err)
+      return null
+    }
+  })
+
   // Config loading
   ipcMain.handle('config:load', async () => {
     try {

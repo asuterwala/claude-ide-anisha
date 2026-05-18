@@ -31,7 +31,7 @@ type Action =
   | { type: 'UPDATE_CLAUDE_STATUS'; status: Partial<ClaudeStatus> }
   | { type: 'SET_GIT_BRANCH'; branch: string | null }
   | { type: 'SET_TAB_DIRTY'; tabId: string; isDirty: boolean }
-  | { type: 'UPDATE_TAB_LABEL'; tabId: string; label: string }
+  | { type: 'UPDATE_TAB_LABEL'; tabId: string; label: string; detectedSessionId?: string }
   | { type: 'TRACK_FEATURE'; feature: string }
   | { type: 'SET_FIRST_LAUNCH'; isFirst: boolean }
   | { type: 'CONFIG_LOADED'; payload: AppConfig }
@@ -85,7 +85,14 @@ function reducer(state: AppState, action: Action): AppState {
     case 'SET_TAB_DIRTY':
       return { ...state, tabs: state.tabs.map(t => t.id === action.tabId ? { ...t, isDirty: action.isDirty } : t) }
     case 'UPDATE_TAB_LABEL':
-      return { ...state, tabs: state.tabs.map(t => t.id === action.tabId ? { ...t, label: action.label } : t) }
+      return {
+        ...state,
+        tabs: state.tabs.map(t =>
+          t.id === action.tabId
+            ? { ...t, label: action.label, ...(action.detectedSessionId ? { detectedSessionId: action.detectedSessionId } : {}) }
+            : t
+        )
+      }
     case 'TRACK_FEATURE': {
       const featuresUsed = new Set(state.behavior.featuresUsed)
       featuresUsed.add(action.feature)

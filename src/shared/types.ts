@@ -14,6 +14,8 @@ export interface Tab {
   filePath?: string    // present for kind === 'file'
   ptyId?: string       // present for kind === 'standalone-chat' | 'folder-chat'
   isDirty?: boolean
+  detectedSessionId?: string  // sessionId of the JSONL we matched this tab to (set by title-poll)
+  createdAtMs?: number  // when tab was opened — used to filter JSONLs newer than the tab
 }
 
 export interface FileNode {

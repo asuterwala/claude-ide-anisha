@@ -24,7 +24,7 @@ function relativeTime(ts: number): string {
 }
 
 interface RecentSessionsProps {
-  onResumeSession?: (sessionId: string, projectPath: string) => void
+  onResumeSession?: (sessionId: string, projectPath: string, title?: string) => void
 }
 
 export function RecentSessions({ onResumeSession }: RecentSessionsProps = {}) {
@@ -39,7 +39,7 @@ export function RecentSessions({ onResumeSession }: RecentSessionsProps = {}) {
 
   const handleClick = async (session: ClaudeSession) => {
     if (onResumeSession) {
-      onResumeSession(session.id, session.projectPath)
+      onResumeSession(session.id, session.projectPath, session.title)
       return
     }
     try {

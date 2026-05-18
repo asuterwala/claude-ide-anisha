@@ -41,6 +41,8 @@ const api = {
   loadConfig: () => ipcRenderer.invoke('config:load'),
   showNotification: (title: string, body: string) => ipcRenderer.invoke('notify:show', title, body),
   getClaudeSessions: (limit?: number) => ipcRenderer.invoke('claudeSessions:list', limit || 10),
+  findSessionTitle: (folderPath: string, sinceMs: number, excludeIds: string[], pinnedSessionId?: string): Promise<{ sessionId: string; title: string } | null> =>
+    ipcRenderer.invoke('claudeSessions:findTitle', folderPath, sinceMs, excludeIds, pinnedSessionId),
   resumeClaudeSession: (sessionId: string, projectPath: string) => ipcRenderer.invoke('claudeSessions:resume', sessionId, projectPath),
   generateSessionSummaries: (sessionIds: string[]): Promise<Record<string, string>> => ipcRenderer.invoke('claudeSessions:generateSummaries', sessionIds),
   getPathForFile: (file: File): string => webUtils.getPathForFile(file),

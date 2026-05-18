@@ -67,11 +67,14 @@ export default function App() {
             type: 'ADD_TAB',
             tab: {
               id,
-              kind: 'folder-chat',
-              label: `Terminal ${state.tabs.filter(t => t.kind === 'folder-chat' || t.kind === 'standalone-chat').length + 1}`,
+              kind: projectPath ? 'folder-chat' : 'standalone-chat',
+              label: projectPath
+                ? (projectPath.split('/').filter(Boolean).pop() ?? 'Chat')
+                : 'Claude — Home',
               closeable: true,
               ptyId,
-              folderPath: projectPath ?? undefined
+              folderPath: projectPath ?? undefined,
+              createdAtMs: Date.now(),
             }
           })
         })
@@ -129,17 +132,26 @@ export default function App() {
     const id = `chat-${Date.now()}`
     dispatch({
       type: 'ADD_TAB',
-      tab: { id, kind: 'standalone-chat', label: 'Claude — Home', closeable: true, ptyId }
+      tab: {
+        id, kind: 'standalone-chat', label: 'Claude — Home', closeable: true, ptyId,
+        createdAtMs: Date.now(),
+      }
     })
   }, [dispatch])
 
-  const handleResumeSession = useCallback(async (sessionId: string, projectPath: string) => {
+  const handleResumeSession = useCallback(async (sessionId: string, projectPath: string, title?: string) => {
     try {
       const ptyId = await window.api.createPty(projectPath, { resumeSessionId: sessionId })
       const id = `terminal-${Date.now()}`
+      const trimmed = title ? title.slice(0, 30) + (title.length > 30 ? '…' : '') : 'Resumed chat'
       dispatch({
         type: 'ADD_TAB',
-        tab: { id, kind: 'folder-chat', label: 'Resumed chat', closeable: true, ptyId, folderPath: projectPath }
+        tab: {
+          id, kind: 'folder-chat', label: trimmed, closeable: true,
+          ptyId, folderPath: projectPath,
+          detectedSessionId: sessionId,
+          createdAtMs: Date.now(),
+        }
       })
     } catch (err) {
       console.error('Failed to resume session:', err)
@@ -163,6 +175,35 @@ export default function App() {
     })
     return () => off?.()
   }, [])
+
+  // Poll for tab-title updates: when claude assigns a name (custom-title / ai-title)
+  // to the session backing a chat tab, refresh the tab label to match.
+  useEffect(() => {
+    if (!window.api.findSessionTitle) return
+    const interval = setInterval(async () => {
+      const chatTabs = state.tabs.filter(t => t.kind === 'folder-chat' || t.kind === 'standalone-chat')
+      if (chatTabs.length === 0) return
+      const claimed = new Set<string>(
+        chatTabs.map(t => t.detectedSessionId).filter((s): s is string => Boolean(s))
+      )
+      for (const tab of chatTabs) {
+        // Empty string means "home directory" — handled in the main IPC.
+        const folder = tab.folderPath ?? ''
+        const since = tab.createdAtMs ?? 0
+        const excludeForThis = [...claimed].filter(s => s !== tab.detectedSessionId)
+        try {
+          const res = await window.api.findSessionTitle(folder, since, excludeForThis, tab.detectedSessionId)
+          if (!res) continue
+          const trimmed = res.title.slice(0, 30) + (res.title.length > 30 ? '…' : '')
+          if (trimmed !== tab.label || res.sessionId !== tab.detectedSessionId) {
+            dispatch({ type: 'UPDATE_TAB_LABEL', tabId: tab.id, label: trimmed, detectedSessionId: res.sessionId })
+            claimed.add(res.sessionId)
+          }
+        } catch {}
+      }
+    }, 5000)
+    return () => clearInterval(interval)
+  }, [state.tabs, dispatch])
 
   const dismissToast = useCallback(() => setCurrentToast(null), [])
 

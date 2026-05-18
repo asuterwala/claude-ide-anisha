@@ -1,0 +1,65 @@
+{
+  "tasks": [
+    {
+      "id": "32ead673-c6c2-8058-a348-f01293141d76",
+      "title": "BI headcount request",
+      "status": "Not started",
+      "dueDate": "2026-03-25"
+    },
+    {
+      "id": "31ead673-c6c2-81d0-b4c7-f8550fc08304",
+      "title": "HI Adds Waterfall",
+      "status": "In progress",
+      "dueDate": "2026-03-18"
+    },
+    {
+      "id": "328ad673-c6c2-80c3-8bff-c7dccd1ac906",
+      "title": "Narrate model into Claude for AI forecast model initiative",
+      "status": "Done",
+      "dueDate": "2026-03-20"
+    },
+    {
+      "id": "327ad673-c6c2-80e0-be65-f94f393a63b9",
+      "title": "Review BI cycle 7 doc",
+      "status": "Done",
+      "dueDate": "2026-03-18"
+    },
+    {
+      "id": "326ad673-c6c2-8017-954a-f466293adc0a",
+      "title": "Anisha to draft first version of status doc for Julia with current MRR bridge work",
+      "status": "Done",
+      "dueDate": "2026-03-17"
+    },
+    {
+      "id": "325ad673-c6c2-80a7-bc9d-de3733d21af0",
+      "title": "BI next partnerhip risks scenario analysis",
+      "status": "Done",
+      "dueDate": "2026-03-18"
+    },
+    {
+      "id": "314ad673-c6c2-80b1-afcc-da1e97ca4264",
+      "title": "Explore how we can use FBOS model for revenue estimates for BI",
+      "status": "Done",
+      "dueDate": "2026-03-11"
+    },
+    {
+      "id": "311ad673-c6c2-80aa-a669-e5ac170c6541",
+      "title": "Add a view for GNARR to BI",
+      "status": "Done",
+      "dueDate": "2026-02-27"
+    },
+    {
+      "id": "311ad673-c6c2-808f-86a9-d821d2d897a7",
+      "title": "Separate opp volume between new customer growth vs. existing customer penetration for BI",
+      "status": "Done",
+      "dueDate": "2026-02-27"
+    },
+    {
+      "id": "311ad673-c6c2-8055-85eb-f7ed26e2afe7",
+      "title": "Pull opportunity data by source for BI",
+      "status": "Done",
+      "dueDate": "2026-02-27"
+    }
+  ],
+  "fetchedAt": "2026-03-26T20:00:00Z"
+}

@@ -1,0 +1,42 @@
+{
+  "today": [
+    {
+      "title": "DNS",
+      "time": "08:30-09:30",
+      "attendees": 0,
+      "location": ""
+    },
+    {
+      "title": "Leah / Anisha re: Growth Opps",
+      "time": "09:30-09:45",
+      "attendees": 2,
+      "location": ""
+    },
+    {
+      "title": "Align on Growth Contributions to Health Insurance ARR Plan",
+      "time": "10:05-10:30",
+      "attendees": 8,
+      "location": ""
+    },
+    {
+      "title": "FBOS AI Pairing",
+      "time": "10:30-11:00",
+      "attendees": 2,
+      "location": ""
+    },
+    {
+      "title": "Priya's 2 yr Gustoversary Kudoboard! Sign by March 31!",
+      "time": "11:30-11:45",
+      "attendees": 120,
+      "location": ""
+    },
+    {
+      "title": "Pigment Office Hours",
+      "time": "13:00-13:30",
+      "attendees": 28,
+      "location": ""
+    }
+  ],
+  "tomorrow": [],
+  "fetchedAt": "2026-03-26T20:00:00Z"
+}
