@@ -135,8 +135,24 @@ export default function TerminalTab({ ptyId, visible }: Props) {
   }, [ptyId, checkAndNotify])
 
   useEffect(() => {
-    if (visible && fitAddonRef.current) {
-      setTimeout(() => fitAddonRef.current?.fit(), 0)
+    if (!visible || !fitAddonRef.current || !containerRef.current) return
+    // Two RAFs: first lets layout apply (display:none → display:block),
+    // second lets the browser measure so getBoundingClientRect is correct.
+    // Without this, fit() reads width=0 and resizes the terminal to ~10 cols.
+    let cancelled = false
+    const raf1 = requestAnimationFrame(() => {
+      if (cancelled) return
+      requestAnimationFrame(() => {
+        if (cancelled) return
+        const rect = containerRef.current?.getBoundingClientRect()
+        if (rect && rect.width > 20 && rect.height > 20) {
+          try { fitAddonRef.current?.fit() } catch {}
+        }
+      })
+    })
+    return () => {
+      cancelled = true
+      cancelAnimationFrame(raf1)
     }
   }, [visible])
 
