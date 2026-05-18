@@ -107,17 +107,11 @@ export default function TerminalTab({ ptyId, visible }: Props) {
         (e.key === 'L' || e.key === 'l')
       ) {
         e.preventDefault()
-        // Full reset wipes the entire terminal (scrollback + viewport).
-        try { terminal.reset() } catch {}
+        // Soft clear: wipe scrollback ABOVE the viewport but keep current
+        // screen. Less destructive than reset(). For truly broken history,
+        // the user should re-resume the chat from Recent Chats instead.
+        try { terminal.clear() } catch {}
         try { fitAddon.fit() } catch {}
-        // Force claude to redraw by triggering a SIGWINCH via a tiny resize +
-        // immediate revert. The PTY resize fires onResize → resizePty → SIGWINCH.
-        try {
-          const cols = terminal.cols
-          const rows = terminal.rows
-          window.api.resizePty(ptyId, Math.max(1, cols - 1), rows)
-          setTimeout(() => window.api.resizePty(ptyId, cols, rows), 30)
-        } catch {}
         return false
       }
       return true
@@ -173,20 +167,11 @@ export default function TerminalTab({ ptyId, visible }: Props) {
         if (cancelled) return
         const rect = containerRef.current?.getBoundingClientRect()
         if (rect && rect.width > 20 && rect.height > 20) {
-          const oldCols = terminalRef.current?.cols ?? 0
           try { fitAddonRef.current?.fit() } catch {}
-          const newCols = terminalRef.current?.cols ?? 0
-          // If the resize was substantial, the scrollback was wrapped at the
-          // wrong width and looks like vertical spaghetti. Full reset and force
-          // claude to repaint via a SIGWINCH (resize-jiggle).
-          if (oldCols > 0 && Math.abs(newCols - oldCols) >= Math.max(20, oldCols * 0.3)) {
-            try { terminalRef.current?.reset() } catch {}
-            try {
-              const rows = terminalRef.current?.rows ?? 30
-              window.api.resizePty(ptyId, Math.max(1, newCols - 1), rows)
-              setTimeout(() => window.api.resizePty(ptyId, newCols, rows), 30)
-            } catch {}
-          }
+          // No auto-clear on tab show: destroying history is worse than seeing
+          // some legacy wrap. xterm reflows soft-wrapped content automatically;
+          // hard-wrapped history (claude wrote literal newlines at narrow width)
+          // can't be fixed without resuming the session in a fresh tab.
         }
       })
     })
