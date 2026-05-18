@@ -143,8 +143,18 @@ export default function TerminalTab({ ptyId, visible }: Props) {
 
     window.api.resizePty(ptyId, terminal.cols, terminal.rows)
 
-    const resizeObserver = new ResizeObserver(() => {
-      fitAddon.fit()
+    // Only fit when the container has real dimensions. When a tab is hidden
+    // (display:none) the container has 0×0 size, and blindly fitting then
+    // would shrink the terminal to ~10 cols and tell claude to redraw narrow,
+    // baking wrong-width newlines into history. The two-RAF fit on visibility
+    // change handles the show case.
+    const resizeObserver = new ResizeObserver((entries) => {
+      const entry = entries[0]
+      if (!entry) return
+      const { width, height } = entry.contentRect
+      if (width > 20 && height > 20) {
+        try { fitAddon.fit() } catch {}
+      }
     })
     resizeObserver.observe(containerRef.current)
 
