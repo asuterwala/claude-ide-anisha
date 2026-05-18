@@ -96,6 +96,25 @@ export default function TerminalTab({ ptyId, visible }: Props) {
     terminal.open(containerRef.current)
     fitAddon.fit()
 
+    // Intercept Cmd+Shift+L at the xterm level so the keystroke doesn't get
+    // forwarded to claude as a regular character. Returning false tells xterm
+    // not to process the key.
+    terminal.attachCustomKeyEventHandler((e: KeyboardEvent) => {
+      if (
+        e.type === 'keydown' &&
+        (e.metaKey || e.ctrlKey) &&
+        e.shiftKey &&
+        (e.key === 'L' || e.key === 'l')
+      ) {
+        e.preventDefault()
+        try { terminal.clear() } catch {}
+        try { fitAddon.fit() } catch {}
+        try { window.api.writePty(ptyId, '\x0c') } catch {}
+        return false
+      }
+      return true
+    })
+
     terminalRef.current = terminal
     fitAddonRef.current = fitAddon
 
@@ -165,19 +184,9 @@ export default function TerminalTab({ ptyId, visible }: Props) {
     }
   }, [visible, ptyId])
 
-  // Cmd+Shift+L manual redraw — backup if auto-clean didn't fire.
-  useEffect(() => {
-    if (!visible) return
-    const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 'l' || e.key === 'L')) {
-        e.preventDefault()
-        try { terminalRef.current?.clear() } catch {}
-        try { window.api.writePty(ptyId, '\x0c') } catch {}
-      }
-    }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [visible, ptyId])
+  // Cmd+Shift+L is intercepted by attachCustomKeyEventHandler on the xterm
+  // instance during creation (above). Window-level handler doesn't work
+  // because xterm consumes keystrokes when focused.
 
   return (
     <div
