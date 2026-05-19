@@ -581,15 +581,29 @@ export function registerIpcHandlers(): void {
           const lines = content.split('\n')
           let custom = ''
           let ai = ''
+          let firstUserMessage = ''
           for (const line of lines) {
             if (!line.trim()) continue
             try {
               const entry = JSON.parse(line)
               if (entry.type === 'custom-title' && entry.customTitle) custom = String(entry.customTitle).slice(0, 80)
               else if (entry.type === 'ai-title' && entry.aiTitle) ai = String(entry.aiTitle).slice(0, 80)
+              else if (!firstUserMessage && entry.type === 'user' && entry.message) {
+                const m = entry.message
+                if (typeof m === 'string') {
+                  firstUserMessage = m.slice(0, 60)
+                } else if (m.content) {
+                  const c = typeof m.content === 'string'
+                    ? m.content
+                    : Array.isArray(m.content) && m.content[0]?.text
+                      ? m.content[0].text
+                      : ''
+                  firstUserMessage = c.slice(0, 60)
+                }
+              }
             } catch {}
           }
-          return custom || ai || null
+          return custom || ai || firstUserMessage || null
         } catch { return null }
       }
 

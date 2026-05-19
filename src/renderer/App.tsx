@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useAppState } from './store'
 import { useClaudeStatus } from './hooks/useClaudeStatus'
 import TabBar from './components/TabBar'
@@ -178,16 +178,19 @@ export default function App() {
 
   // Poll for tab-title updates: when claude assigns a name (custom-title / ai-title)
   // to the session backing a chat tab, refresh the tab label to match.
+  // Use a ref so the interval is set up ONCE and not torn down on every tab change.
+  const tabsRef = useRef(state.tabs)
+  useEffect(() => { tabsRef.current = state.tabs }, [state.tabs])
+
   useEffect(() => {
     if (!window.api.findSessionTitle) return
-    const interval = setInterval(async () => {
-      const chatTabs = state.tabs.filter(t => t.kind === 'folder-chat' || t.kind === 'standalone-chat')
+    const runPoll = async () => {
+      const chatTabs = tabsRef.current.filter(t => t.kind === 'folder-chat' || t.kind === 'standalone-chat')
       if (chatTabs.length === 0) return
       const claimed = new Set<string>(
         chatTabs.map(t => t.detectedSessionId).filter((s): s is string => Boolean(s))
       )
       for (const tab of chatTabs) {
-        // Empty string means "home directory" — handled in the main IPC.
         const folder = tab.folderPath ?? ''
         const since = tab.createdAtMs ?? 0
         const excludeForThis = [...claimed].filter(s => s !== tab.detectedSessionId)
@@ -195,15 +198,22 @@ export default function App() {
           const res = await window.api.findSessionTitle(folder, since, excludeForThis, tab.detectedSessionId)
           if (!res) continue
           const trimmed = res.title.slice(0, 30) + (res.title.length > 30 ? '…' : '')
-          if (trimmed !== tab.label || res.sessionId !== tab.detectedSessionId) {
+          // Only update if something actually changed. Compare via the ref's
+          // current snapshot, not the closed-over `tab` (which could be stale).
+          const live = tabsRef.current.find(t => t.id === tab.id)
+          if (!live) continue
+          if (trimmed !== live.label || res.sessionId !== live.detectedSessionId) {
             dispatch({ type: 'UPDATE_TAB_LABEL', tabId: tab.id, label: trimmed, detectedSessionId: res.sessionId })
             claimed.add(res.sessionId)
           }
         } catch {}
       }
-    }, 5000)
+    }
+    // Fire once immediately, then every 4s.
+    runPoll()
+    const interval = setInterval(runPoll, 4000)
     return () => clearInterval(interval)
-  }, [state.tabs, dispatch])
+  }, [dispatch])
 
   const dismissToast = useCallback(() => setCurrentToast(null), [])
 
