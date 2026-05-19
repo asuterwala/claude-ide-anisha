@@ -20,8 +20,8 @@ html, body, #root {
   flex-direction: column;
   position: relative;
   overflow: hidden;
-  /* Solid soft cream-white, matching the bottom of the sidebar gradient. */
-  background: #F0F4F8;
+  /* Near-pure white with a hint of cool tint. */
+  background: #FAFBFD;
 }
 
 ::-webkit-scrollbar {
