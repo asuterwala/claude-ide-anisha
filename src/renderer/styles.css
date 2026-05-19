@@ -20,12 +20,8 @@ html, body, #root {
   flex-direction: column;
   position: relative;
   overflow: hidden;
-  background:
-    radial-gradient(ellipse 70% 50% at 20% 0%,  rgba(243, 212, 243, 0.65), transparent 60%),
-    radial-gradient(ellipse 65% 45% at 80% 5%,  rgba(255, 209, 211, 0.55), transparent 60%),
-    radial-gradient(ellipse 80% 50% at 50% 10%, rgba(255, 202, 164, 0.35), transparent 65%),
-    radial-gradient(ellipse 90% 60% at 50% 95%, rgba(91, 141, 239, 0.10), transparent 70%),
-    linear-gradient(180deg, #FBF8FB 0%, #F8F9FA 50%, #F0F4F8 100%);
+  /* Solid soft cream-white, matching the bottom of the sidebar gradient. */
+  background: #F0F4F8;
 }
 
 ::-webkit-scrollbar {
