@@ -97,23 +97,25 @@ export default function TerminalTab({ ptyId, visible }: Props) {
     terminal.open(containerRef.current)
     fitAddon.fit()
 
-    // Intercept Cmd+Shift+L at the xterm level so the keystroke doesn't get
-    // forwarded to claude as a regular character. Returning false tells xterm
-    // not to process the key.
+    // Intercept Cmd+Shift+L and Cmd+Shift+R at the xterm level so the
+    // keystrokes don't get forwarded to claude as regular characters.
+    // Returning false tells xterm not to process the key.
     terminal.attachCustomKeyEventHandler((e: KeyboardEvent) => {
-      if (
-        e.type === 'keydown' &&
-        (e.metaKey || e.ctrlKey) &&
-        e.shiftKey &&
-        (e.key === 'L' || e.key === 'l')
-      ) {
-        e.preventDefault()
-        // Soft clear: wipe scrollback ABOVE the viewport but keep current
-        // screen. Less destructive than reset(). For truly broken history,
-        // the user should re-resume the chat from Recent Chats instead.
-        try { terminal.clear() } catch {}
-        try { fitAddon.fit() } catch {}
-        return false
+      if (e.type === 'keydown' && (e.metaKey || e.ctrlKey) && e.shiftKey) {
+        // Cmd+Shift+L: soft-clear scrollback (less destructive than reset()).
+        if (e.key === 'L' || e.key === 'l') {
+          e.preventDefault()
+          try { terminal.clear() } catch {}
+          try { fitAddon.fit() } catch {}
+          return false
+        }
+        // Cmd+Shift+R: reload current chat at the current window width.
+        // App.tsx handles the actual reload via the 'reload-chat-tab' event.
+        if (e.key === 'R' || e.key === 'r') {
+          e.preventDefault()
+          window.dispatchEvent(new CustomEvent('reload-chat-tab'))
+          return false
+        }
       }
       return true
     })

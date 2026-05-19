@@ -35,20 +35,31 @@ export default function FolderGroup({ folderPath, tabs, activeTabId, onTabClick,
         <span className="dot" style={{ background: color.dot }}></span>
         📂 {folderBasename(folderPath)}
       </div>
-      {tabs.map(tab => (
-        <div
-          key={tab.id}
-          className={`tab ${tab.id === activeTabId ? 'active' : ''}`}
-          onClick={() => onTabClick(tab.id)}
-        >
-          <span>{tab.kind === 'file' ? '📄' : '💬'}</span>
-          {tab.label}
-          {tab.isDirty && <span className="dirty">●</span>}
-          {tab.closeable && (
-            <span className="x" onClick={(e) => { e.stopPropagation(); onTabClose(tab.id) }}>×</span>
-          )}
-        </div>
-      ))}
+      {tabs.map(tab => {
+        const isActiveChat = tab.id === activeTabId &&
+          (tab.kind === 'folder-chat' || tab.kind === 'standalone-chat')
+        return (
+          <div
+            key={tab.id}
+            className={`tab ${tab.id === activeTabId ? 'active' : ''}`}
+            onClick={() => onTabClick(tab.id)}
+          >
+            <span>{tab.kind === 'file' ? '📄' : '💬'}</span>
+            {tab.label}
+            {tab.isDirty && <span className="dirty">●</span>}
+            {isActiveChat && (
+              <span
+                className="x"
+                title="Reload at current size (⌘⇧R)"
+                onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('reload-chat-tab')) }}
+              >↻</span>
+            )}
+            {tab.closeable && (
+              <span className="x" onClick={(e) => { e.stopPropagation(); onTabClose(tab.id) }}>×</span>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }

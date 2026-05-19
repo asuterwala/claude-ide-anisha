@@ -23,6 +23,32 @@ export default function App() {
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [paletteItems, setPaletteItems] = useState<PaletteItem[]>([])
 
+  // Reload the active chat tab at the current window width: kill the running
+  // claude process and re-launch it with `--resume <session-id>` so it re-draws
+  // the full conversation history at whatever the terminal is sized to now.
+  // Necessary because xterm can't reflow content that was drawn with hard
+  // newlines (claude's TUI does this for boxes, markdown, code blocks).
+  const handleReloadActiveTab = useCallback(async () => {
+    const active = state.tabs.find(t => t.id === state.activeTabId)
+    if (!active || (active.kind !== 'folder-chat' && active.kind !== 'standalone-chat')) return
+    if (!active.detectedSessionId) {
+      setCurrentToast({ id: String(Date.now()), message: 'Chat is still warming up — try again in a moment.' })
+      return
+    }
+    try {
+      if (active.ptyId) {
+        window.api.destroyPty(active.ptyId)
+      }
+      const newPtyId = await window.api.createPty(active.folderPath ?? null, {
+        resumeSessionId: active.detectedSessionId,
+      })
+      dispatch({ type: 'UPDATE_TAB_PTY', tabId: active.id, ptyId: newPtyId })
+    } catch (err) {
+      console.error('Failed to reload tab:', err)
+      setCurrentToast({ id: String(Date.now()), message: 'Reload failed — see logs.' })
+    }
+  }, [state.tabs, state.activeTabId, dispatch])
+
   useEffect(() => {
     async function init() {
       // Check if first launch
@@ -46,6 +72,13 @@ export default function App() {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const isMod = e.metaKey || e.ctrlKey
+      // Cmd+Shift+R: reload current chat at the current window width.
+      // (Cmd+R would conflict with Electron's full-app reload.)
+      if (isMod && e.shiftKey && (e.key === 'R' || e.key === 'r')) {
+        e.preventDefault()
+        handleReloadActiveTab()
+        return
+      }
       // Cmd+W: Close active tab
       if (isMod && e.key === 'w') {
         e.preventDefault()
@@ -82,7 +115,17 @@ export default function App() {
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [dispatch, state.tabs, state.activeTabId, state.projectPath])
+  }, [dispatch, state.tabs, state.activeTabId, state.projectPath, handleReloadActiveTab])
+
+  // TerminalTab intercepts Cmd+Shift+R inside xterm (otherwise xterm eats
+  // the keystroke and forwards "R" to claude). It dispatches a custom event
+  // we listen for here so the same shortcut works whether or not focus is
+  // in the terminal.
+  useEffect(() => {
+    const handler = () => handleReloadActiveTab()
+    window.addEventListener('reload-chat-tab', handler)
+    return () => window.removeEventListener('reload-chat-tab', handler)
+  }, [handleReloadActiveTab])
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {

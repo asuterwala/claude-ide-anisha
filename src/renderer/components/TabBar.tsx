@@ -15,6 +15,15 @@ export default function TabBar() {
     dispatch({ type: 'CLOSE_TAB', tabId: id })
   }
 
+  const onReload = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    window.dispatchEvent(new CustomEvent('reload-chat-tab'))
+  }
+
+  const isActiveChat = (t: Tab) =>
+    t.id === state.activeTabId &&
+    (t.kind === 'folder-chat' || t.kind === 'standalone-chat')
+
   const renderStandalone = (t: Tab) => (
     <div
       key={t.id}
@@ -22,6 +31,9 @@ export default function TabBar() {
       onClick={() => onClick(t.id)}
     >
       {iconFor(t)} {t.label}
+      {isActiveChat(t) && (
+        <span className="x" title="Reload at current size (⌘⇧R)" onClick={onReload}>↻</span>
+      )}
       {t.closeable && <span className="x" onClick={(e) => { e.stopPropagation(); onClose(t.id) }}>×</span>}
     </div>
   )

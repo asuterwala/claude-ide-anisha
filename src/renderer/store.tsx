@@ -32,6 +32,7 @@ type Action =
   | { type: 'SET_GIT_BRANCH'; branch: string | null }
   | { type: 'SET_TAB_DIRTY'; tabId: string; isDirty: boolean }
   | { type: 'UPDATE_TAB_LABEL'; tabId: string; label: string; detectedSessionId?: string }
+  | { type: 'UPDATE_TAB_PTY'; tabId: string; ptyId: string }
   | { type: 'TRACK_FEATURE'; feature: string }
   | { type: 'SET_FIRST_LAUNCH'; isFirst: boolean }
   | { type: 'CONFIG_LOADED'; payload: AppConfig }
@@ -91,6 +92,13 @@ function reducer(state: AppState, action: Action): AppState {
           t.id === action.tabId
             ? { ...t, label: action.label, ...(action.detectedSessionId ? { detectedSessionId: action.detectedSessionId } : {}) }
             : t
+        )
+      }
+    case 'UPDATE_TAB_PTY':
+      return {
+        ...state,
+        tabs: state.tabs.map(t =>
+          t.id === action.tabId ? { ...t, ptyId: action.ptyId } : t
         )
       }
     case 'TRACK_FEATURE': {
