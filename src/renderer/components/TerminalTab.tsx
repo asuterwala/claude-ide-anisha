@@ -60,8 +60,9 @@ export default function TerminalTab({ ptyId, visible }: Props) {
     if (!containerRef.current) return
 
     const terminal = new Terminal({
+      allowTransparency: true,
       theme: {
-        background: '#F3EDF8',           // lavender wash
+        background: 'rgba(0, 0, 0, 0)',  // transparent — show the #root gradient through
         foreground: '#2D3748',
         cursor: '#5B8DEF',
         cursorAccent: '#FFFFFF',
@@ -201,7 +202,7 @@ export default function TerminalTab({ ptyId, visible }: Props) {
         width: '100%',
         height: '100%',
         display: visible ? 'block' : 'none',
-        background: '#F3EDF8',
+        background: 'transparent',
         position: 'relative',
       }}
       onDragEnter={(e) => {
