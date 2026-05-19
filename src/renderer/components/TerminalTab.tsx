@@ -154,7 +154,16 @@ export default function TerminalTab({ ptyId, visible }: Props) {
       if (!entry) return
       const { width, height } = entry.contentRect
       if (width > 20 && height > 20) {
+        // Preserve "stuck to bottom" feel: if the user was at the bottom
+        // before the resize, snap them back after the fit so they see the
+        // latest output. If they were scrolled up reading history, leave
+        // their position alone.
+        const buf = terminal.buffer.active
+        const wasAtBottom = buf.viewportY >= buf.baseY
         try { fitAddon.fit() } catch {}
+        if (wasAtBottom) {
+          try { terminal.scrollToBottom() } catch {}
+        }
       }
     })
     resizeObserver.observe(containerRef.current)
@@ -183,6 +192,9 @@ export default function TerminalTab({ ptyId, visible }: Props) {
           // some legacy wrap. xterm reflows soft-wrapped content automatically;
           // hard-wrapped history (claude wrote literal newlines at narrow width)
           // can't be fixed without resuming the session in a fresh tab.
+          // Snap to bottom on tab show so the user sees the latest output
+          // instead of whatever scroll position the hidden tab was at.
+          try { terminalRef.current?.scrollToBottom() } catch {}
         }
       })
     })
