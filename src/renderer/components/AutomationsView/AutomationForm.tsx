@@ -6,6 +6,12 @@ interface Props {
   onCancel: () => void
 }
 
+const ICON_PRESETS: string[] = [
+  '⚡', '🔄', '📊', '📈',
+  '💰', '📅', '📝', '📬',
+  '🎯', '🔔', '🤖', '✨',
+]
+
 const CRON_PRESETS: Array<{ label: string; value: string | 'CUSTOM' | null }> = [
   { label: 'Manual only (no schedule)', value: null },
   { label: 'Weekdays 7:00am',           value: '0 7 * * 1-5' },
@@ -74,16 +80,36 @@ export default function AutomationForm({ onSubmit, onCancel }: Props) {
 
         <label>Name<input value={name} onChange={(e) => setName(e.target.value)} placeholder="Refresh BI Dashboard" autoFocus /></label>
 
-        <div style={{ display: 'flex', gap: 12 }}>
-          <label style={{ flex: '0 0 80px' }}>Icon<input value={icon} onChange={(e) => setIcon(e.target.value)} maxLength={2} /></label>
-          <label style={{ flex: 1 }}>
-            Skill
-            <select value={skill} onChange={(e) => setSkill(e.target.value)}>
-              <option value="">— pick a skill —</option>
-              {skills.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
-            </select>
-          </label>
+        <div>
+          <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6 }}>Icon</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: 4 }}>
+            {ICON_PRESETS.map(emoji => (
+              <button
+                key={emoji}
+                type="button"
+                onClick={() => setIcon(emoji)}
+                style={{
+                  fontSize: 18,
+                  padding: '6px 0',
+                  borderRadius: 6,
+                  border: icon === emoji ? '2px solid var(--accent-primary, #5B8DEF)' : '1px solid var(--border-color, #E2E8F0)',
+                  background: icon === emoji ? 'rgba(91, 141, 239, 0.08)' : '#FFFFFF',
+                  cursor: 'pointer',
+                  lineHeight: 1,
+                }}
+                aria-label={`Pick icon ${emoji}`}
+              >{emoji}</button>
+            ))}
+          </div>
         </div>
+
+        <label>
+          Skill
+          <select value={skill} onChange={(e) => setSkill(e.target.value)}>
+            <option value="">— pick a skill —</option>
+            {skills.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
+          </select>
+        </label>
 
         <label>Folder<input value={folder} onChange={(e) => setFolder(e.target.value)} placeholder="~/Documents/finance/benefits-model" /></label>
 
