@@ -229,7 +229,9 @@ export default function TerminalTab({ ptyId, visible }: Props) {
         style={{
           width: '100%',
           height: '100%',
-          padding: '12px 16px',
+          // Extra right padding leaves room for xterm's vertical scrollbar so
+          // text doesn't get drawn underneath it.
+          padding: '12px 28px 12px 16px',
           boxSizing: 'border-box',
         }}
       />
