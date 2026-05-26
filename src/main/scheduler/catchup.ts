@@ -63,9 +63,13 @@ async function hasRunSince(automationId: string, since: Date): Promise<boolean> 
         const raw = await fs.readFile(join(RUNS_DIR, d.name, 'status.json'), 'utf8')
         const r: Run = JSON.parse(raw)
         if (new Date(r.startedAt).getTime() >= since.getTime()) return true
-      } catch {}
+      } catch (err) {
+        console.error('catchup: unreadable status.json in', d.name, err)
+      }
     }
-  } catch {}
+  } catch (err) {
+    console.error('catchup: failed to read runs dir', err)
+  }
   return false
 }
 
@@ -109,8 +113,12 @@ export async function sweepOrphans(): Promise<{ swept: string[] }> {
           await fs.writeFile(statusFile, JSON.stringify(updated, null, 2))
           swept.push(d.name)
         }
-      } catch {}
+      } catch (err) {
+        console.error('sweepOrphans: unreadable status.json in', d.name, err)
+      }
     }
-  } catch {}
+  } catch (err) {
+    console.error('sweepOrphans: failed to read runs dir', err)
+  }
   return { swept }
 }

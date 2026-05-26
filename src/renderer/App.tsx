@@ -287,7 +287,11 @@ export default function App() {
             dispatch({ type: 'UPDATE_TAB_LABEL', tabId: tab.id, label: trimmed, detectedSessionId: res.sessionId })
             claimed.add(res.sessionId)
           }
-        } catch {}
+        } catch (err) {
+          // Log so a misbehaving session shows up in devtools rather than
+          // silently freezing the tab title at "Claude — Home" or similar.
+          console.error('title-poll failed for tab', tab.id, err)
+        }
       }
     }
     // Fire once immediately, then every 4s.

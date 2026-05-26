@@ -295,7 +295,8 @@ export function registerIpcHandlers(): void {
         bypassCustomProtocolHandlers: true,
       })
       return response.ok
-    } catch {
+    } catch (err) {
+      console.error('stats:post failed', err)
       return false
     }
   })
@@ -311,7 +312,8 @@ export function registerIpcHandlers(): void {
       if (!response.ok) return null
       const text = await response.text()
       return JSON.parse(text)
-    } catch {
+    } catch (err) {
+      console.error('stats:getTeam failed', err)
       return null
     }
   })

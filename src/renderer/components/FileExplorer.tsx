@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAppState } from '../store'
 import { useFileTree } from '../hooks/useFileTree'
 import type { FileNode, GitFileStatus } from '../../shared/types'
@@ -19,27 +19,37 @@ function gitBadgeLetter(status: GitFileStatus): string {
   return ''
 }
 
-function FileTreeNode({ node, depth, gitStatuses, onFileClick, onFolderClick }: {
+function FileTreeNode({ node, depth, gitStatuses, refreshVersion, onFileClick, onFolderClick }: {
   node: FileNode
   depth: number
   gitStatuses: Record<string, GitFileStatus>
+  refreshVersion: number
   onFileClick: (path: string, name: string) => void
   onFolderClick: (path: string, name: string) => void
 }) {
   const [expanded, setExpanded] = useState(false)
   const [children, setChildren] = useState<FileNode[]>([])
 
-  const handleClick = async () => {
+  // Re-fetch children whenever the folder is expanded OR a file change
+  // ticks refreshVersion. This is what keeps an open subtree in sync with
+  // the disk; without it, files added/removed inside the folder weren't
+  // reflected until you collapsed and re-opened.
+  useEffect(() => {
+    if (!expanded || !node.isDirectory) return
+    let cancelled = false
+    window.api.readDir(node.path).then(nodes => {
+      if (!cancelled) setChildren(nodes)
+    }).catch(err => {
+      console.error('FileTreeNode readDir failed for', node.path, err)
+    })
+    return () => { cancelled = true }
+  }, [expanded, refreshVersion, node.path, node.isDirectory])
+
+  const handleClick = () => {
     if (node.isDirectory) {
-      if (!expanded) {
-        const nodes = await window.api.readDir(node.path)
-        setChildren(nodes)
-      }
       const wasExpanded = expanded
       setExpanded(!expanded)
-      if (!wasExpanded) {
-        onFolderClick(node.path, node.name)
-      }
+      if (!wasExpanded) onFolderClick(node.path, node.name)
     } else {
       onFileClick(node.path, node.name)
     }
@@ -78,6 +88,7 @@ function FileTreeNode({ node, depth, gitStatuses, onFileClick, onFolderClick }: 
           node={child}
           depth={depth + 1}
           gitStatuses={gitStatuses}
+          refreshVersion={refreshVersion}
           onFileClick={onFileClick}
           onFolderClick={onFolderClick}
         />
@@ -88,7 +99,7 @@ function FileTreeNode({ node, depth, gitStatuses, onFileClick, onFolderClick }: 
 
 export default function FileExplorer() {
   const { state, dispatch } = useAppState()
-  const { tree, gitStatuses } = useFileTree(state.projectPath)
+  const { tree, gitStatuses, refreshVersion } = useFileTree(state.projectPath)
 
   const handleSwitchFolder = async () => {
     try {
@@ -171,6 +182,7 @@ export default function FileExplorer() {
             node={node}
             depth={0}
             gitStatuses={gitStatuses}
+            refreshVersion={refreshVersion}
             onFileClick={handleFileClick}
             onFolderClick={handleFolderClick}
           />

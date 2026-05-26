@@ -30,9 +30,16 @@ export function useAutomations() {
     refresh()
     const unsubscribe = window.api.onRunUpdate((run: Run) => {
       setRuns(prev => {
-        const idx = prev.findIndex(p => p.runId === run.runId)
-        if (idx === -1) return [...prev, run]
-        const copy = [...prev]
+        // The optimistic entry we inserted on Run-now click has runId
+        // "optimistic-<automationId>-<ts>". When the real run arrives for
+        // the same automation, drop the optimistic placeholder so we don't
+        // show two rows (a stuck "Running…" + the real result).
+        const cleaned = prev.filter(p =>
+          !(p.runId.startsWith('optimistic-') && p.automationId === run.automationId)
+        )
+        const idx = cleaned.findIndex(p => p.runId === run.runId)
+        if (idx === -1) return [...cleaned, run]
+        const copy = [...cleaned]
         copy[idx] = run
         return copy
       })

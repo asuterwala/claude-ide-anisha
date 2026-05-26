@@ -29,14 +29,34 @@ interface RecentSessionsProps {
 }
 
 export function RecentSessions({ onResumeSession, onNewChat }: RecentSessionsProps = {}) {
-  const { dispatch } = useAppState()
+  const { state, dispatch } = useAppState()
   const [sessions, setSessions] = useState<ClaudeSession[]>([])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
+
+  // Re-fetch the list when the set of chat tabs changes. New chats land on
+  // disk as Claude writes the JSONL; existing approach loaded once at mount
+  // and went stale after a single chat was created/closed.
+  const chatTabCount = state.tabs.filter(
+    t => t.kind === 'folder-chat' || t.kind === 'standalone-chat'
+  ).length
 
   useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setLoadError(false)
     window.api.getClaudeSessions?.(10).then((data: ClaudeSession[]) => {
+      if (cancelled) return
       setSessions(data)
-    }).catch(() => setSessions([]))
-  }, [])
+      setLoading(false)
+    }).catch((err) => {
+      if (cancelled) return
+      console.error('RecentSessions load failed:', err)
+      setLoadError(true)
+      setLoading(false)
+    })
+    return () => { cancelled = true }
+  }, [chatTabCount])
 
   const handleClick = async (session: ClaudeSession) => {
     if (onResumeSession) {
@@ -72,7 +92,17 @@ export function RecentSessions({ onResumeSession, onNewChat }: RecentSessionsPro
           disabled={!onNewChat}
         >+</button>
       </div>
-      {sessions.length === 0 ? (
+      {loading ? (
+        <div className="row" style={{ color: 'var(--text-muted)' }}>
+          <span>⏳</span>
+          <span className="name">Loading…</span>
+        </div>
+      ) : loadError ? (
+        <div className="row" style={{ color: 'var(--text-muted)' }}>
+          <span>⚠️</span>
+          <span className="name">Couldn't load recent chats</span>
+        </div>
+      ) : sessions.length === 0 ? (
         <div className="row" style={{ color: 'var(--text-muted)' }}>
           <span>💬</span>
           <span className="name">No recent chats</span>
