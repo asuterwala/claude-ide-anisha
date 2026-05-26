@@ -111,7 +111,24 @@ export default function AutomationForm({ onSubmit, onCancel }: Props) {
           </select>
         </label>
 
-        <label>Folder<input value={folder} onChange={(e) => setFolder(e.target.value)} placeholder="~/Documents/finance/benefits-model" /></label>
+        <div>
+          <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6 }}>Folder</div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              style={{ flex: 1 }}
+              value={folder}
+              onChange={(e) => setFolder(e.target.value)}
+              placeholder="~/Documents/finance/benefits-model"
+            />
+            <button
+              type="button"
+              onClick={async () => {
+                const picked = await window.api.selectDirectory?.()
+                if (picked) setFolder(picked)
+              }}
+            >Browse…</button>
+          </div>
+        </div>
 
         <label>Schedule
           <select
