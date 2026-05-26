@@ -219,6 +219,18 @@ export default function App() {
     return () => off?.()
   }, [])
 
+  // In-app components dispatch CustomEvent('show-toast') for ephemeral
+  // feedback (e.g. automation kickoff). Same display path as backend toasts.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { message?: string } | undefined
+      if (!detail?.message) return
+      setCurrentToast({ id: String(Date.now()), message: detail.message })
+    }
+    window.addEventListener('show-toast', handler)
+    return () => window.removeEventListener('show-toast', handler)
+  }, [])
+
   // Poll for tab-title updates: when claude assigns a name (custom-title / ai-title)
   // to the session backing a chat tab, refresh the tab label to match.
   // Use a ref so the interval is set up ONCE and not torn down on every tab change.

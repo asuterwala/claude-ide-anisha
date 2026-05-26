@@ -71,7 +71,13 @@ export default function RunList({ automations, runs, onRunNow, onRemove }: Props
                 <td>{fmtRelativeFinished(last)}</td>
                 <td><span className={`badge ${badgeClass}`}>{badgeLabel}</span></td>
                 <td>
-                  <button className="run-btn" onClick={() => onRunNow(a.id)}>▶ Run now</button>
+                  <button
+                    className="run-btn"
+                    onClick={() => onRunNow(a.id)}
+                    disabled={last?.state === 'running'}
+                  >
+                    {last?.state === 'running' ? '● Running…' : '▶ Run now'}
+                  </button>
                   <button
                     className="run-btn"
                     style={{ marginLeft: 4 }}
