@@ -95,6 +95,13 @@ export default function TerminalTab({ ptyId, visible }: Props) {
     const fitAddon = new FitAddon()
     terminal.loadAddon(fitAddon)
     terminal.open(containerRef.current)
+    // FitAddon's cols calculation subtracts the .xterm element's OWN padding
+    // (not the parent container's padding) and the measured scrollbar width.
+    // macOS overlay scrollbars measure as 0 width, so without this padding
+    // the rightmost characters end up drawn underneath the scrollbar.
+    if (terminal.element) {
+      terminal.element.style.paddingRight = '12px'
+    }
     fitAddon.fit()
 
     // Intercept Cmd+Shift+L and Cmd+Shift+R at the xterm level so the
@@ -218,6 +225,14 @@ export default function TerminalTab({ ptyId, visible }: Props) {
         display: visible ? 'block' : 'none',
         background: 'transparent',
         position: 'relative',
+        // Visual margin around the terminal lives on the OUTER wrapper so
+        // the inner ref div (xterm's parent) has no padding. FitAddon uses
+        // getComputedStyle(parent).width — with border-box sizing that
+        // includes the parent's padding, so if we put padding on the inner
+        // div FitAddon would over-estimate the available width and draw text
+        // into the visual margin.
+        padding: '12px 16px',
+        boxSizing: 'border-box',
       }}
       onDragEnter={(e) => {
         e.preventDefault()
@@ -229,10 +244,6 @@ export default function TerminalTab({ ptyId, visible }: Props) {
         style={{
           width: '100%',
           height: '100%',
-          // Extra right padding leaves room for xterm's vertical scrollbar so
-          // text doesn't get drawn underneath it.
-          padding: '12px 28px 12px 16px',
-          boxSizing: 'border-box',
         }}
       />
       {isDragging && (
