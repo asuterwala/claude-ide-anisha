@@ -9,7 +9,7 @@ function fmtHour(h: number): string {
   return h < 12 ? `${h}a` : `${h - 12}p`
 }
 
-export default function Timeline({ automations, runs }: Props) {
+export default function Timeline({ automations, runs, onRunNow }: Props) {
   const now = new Date()
   const nowPct = timeToPct(now)
   const labels = [4, 7, 10, 13, 16, 19, 22]
@@ -24,12 +24,23 @@ export default function Timeline({ automations, runs }: Props) {
       </div>
       {automations.map(a => {
         const myRuns = runs.filter(r => r.automationId === a.id)
+        const latest = myRuns.length > 0
+          ? [...myRuns].sort((x, y) => x.startedAt.localeCompare(y.startedAt)).pop()
+          : undefined
+        const isRunning = latest?.state === 'running'
         return (
           <div className="auto-row" key={a.id}>
             <div className="auto-label">
               <span className="auto-icon">{a.icon}</span>
               <span className="auto-name">{a.name}</span>
               <span className="auto-cron">{a.schedule ?? 'manual'}</span>
+              <button
+                className="auto-run-now"
+                onClick={() => onRunNow(a.id)}
+                disabled={isRunning}
+                title={isRunning ? 'Already running' : 'Run now'}
+                aria-label="Run now"
+              >{isRunning ? '●' : '▶'}</button>
             </div>
             <div className="auto-track">
               <div className="now-marker" style={{ left: `${nowPct}%` }}></div>

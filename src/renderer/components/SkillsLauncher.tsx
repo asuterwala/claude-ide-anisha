@@ -19,6 +19,10 @@ export function SkillsLauncher({ compact }: SkillsLauncherProps = {}) {
     if (terminalTab) {
       dispatch({ type: 'SET_ACTIVE_TAB', tabId: terminalTab.id })
       window.api.writePty(terminalTab.ptyId!, cmd + '\n')
+    } else {
+      window.dispatchEvent(new CustomEvent('show-toast', {
+        detail: { message: 'Open a chat first, then click the skill.' }
+      }))
     }
   }
 

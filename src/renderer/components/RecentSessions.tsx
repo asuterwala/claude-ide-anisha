@@ -25,9 +25,10 @@ function relativeTime(ts: number): string {
 
 interface RecentSessionsProps {
   onResumeSession?: (sessionId: string, projectPath: string, title?: string) => void
+  onNewChat?: () => void
 }
 
-export function RecentSessions({ onResumeSession }: RecentSessionsProps = {}) {
+export function RecentSessions({ onResumeSession, onNewChat }: RecentSessionsProps = {}) {
   const { dispatch } = useAppState()
   const [sessions, setSessions] = useState<ClaudeSession[]>([])
 
@@ -63,7 +64,13 @@ export function RecentSessions({ onResumeSession }: RecentSessionsProps = {}) {
     <section className="sidebar-section">
       <div className="sidebar-header">
         <span>Recent Chats</span>
-        <span className="add" title="New chat">+</span>
+        <button
+          className="add"
+          title="Start a new Claude chat"
+          aria-label="Start a new Claude chat"
+          onClick={onNewChat}
+          disabled={!onNewChat}
+        >+</button>
       </div>
       {sessions.length === 0 ? (
         <div className="row" style={{ color: 'var(--text-muted)' }}>

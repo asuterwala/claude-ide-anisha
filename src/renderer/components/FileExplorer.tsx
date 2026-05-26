@@ -90,6 +90,26 @@ export default function FileExplorer() {
   const { state, dispatch } = useAppState()
   const { tree, gitStatuses } = useFileTree(state.projectPath)
 
+  const handleSwitchFolder = async () => {
+    try {
+      const folder = await window.api.selectDirectory()
+      if (!folder) return
+      dispatch({ type: 'SET_PROJECT_PATH', path: folder })
+      await window.api.watchProject(folder)
+      await window.api.addRecentSession(folder)
+      const branch = await window.api.getGitBranch(folder)
+      dispatch({ type: 'SET_GIT_BRANCH', branch })
+      window.dispatchEvent(new CustomEvent('show-toast', {
+        detail: { message: `Switched to ${folder.split('/').filter(Boolean).pop()}` }
+      }))
+    } catch (err) {
+      console.error('Failed to switch folder:', err)
+      window.dispatchEvent(new CustomEvent('show-toast', {
+        detail: { message: 'Couldn\'t open folder. See console for details.' }
+      }))
+    }
+  }
+
   const handleFileClick = (filePath: string, fileName: string) => {
     const existing = state.tabs.find(t => t.filePath === filePath)
     if (existing) {
@@ -137,7 +157,12 @@ export default function FileExplorer() {
     <section className="sidebar-section">
       <div className="sidebar-header">
         <span>Folders</span>
-        <span className="add" title="Add folder">+</span>
+        <button
+          className="add"
+          title="Open a different folder"
+          onClick={handleSwitchFolder}
+          aria-label="Open a different folder"
+        >+</button>
       </div>
       <div className="tree">
         {tree.map(node => (

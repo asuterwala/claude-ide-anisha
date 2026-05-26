@@ -145,6 +145,22 @@
 .auto-icon { width: 18px; font-size: 14px; }
 .auto-name { color: var(--text-primary); font-size: 13px; font-weight: 500; }
 .auto-cron { color: var(--text-muted); font-size: 10.5px; margin-left: auto; }
+.auto-run-now {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  background: #FFFFFF;
+  color: var(--accent-primary);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.auto-run-now:hover:not(:disabled) { background: rgba(91,141,239,0.08); }
+.auto-run-now:disabled { color: var(--text-muted); cursor: default; }
 
 .auto-track {
   flex: 1;

@@ -130,6 +130,10 @@ export default function App() {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        // If a Monaco editor has focus, defer Cmd+K to the editor (inline edit).
+        // Otherwise we'd open the palette AND trigger inline edit simultaneously.
+        const active = document.activeElement
+        if (active && active.closest('.monaco-editor')) return
         e.preventDefault()
         buildPaletteItems().then(setPaletteItems)
         setPaletteOpen(p => !p)
@@ -144,12 +148,14 @@ export default function App() {
     const items: PaletteItem[] = [
       { id: 'action:new-chat', kind: 'action', label: 'New Claude chat', hint: '⌘T' },
     ]
-    // Recent chats
+    // Recent chats — use getClaudeSessions (which has real sessionIds from
+    // the .jsonl scan), not getRecentSessions (only projectPath, no session
+    // id, which made palette resume open a fresh chat instead of resuming).
     try {
-      const sessions = await window.api.getRecentSessions?.() ?? []
-      for (const s of sessions.slice(0, 20)) {
-        const name = s.projectPath.split('/').filter(Boolean).pop() ?? s.projectPath
-        items.push({ id: `chat:${s.projectPath}`, kind: 'chat', label: name, hint: relativeTime(s.lastOpened), meta: s })
+      const sessions = await window.api.getClaudeSessions?.(20) ?? []
+      for (const s of sessions) {
+        const label = s.title?.slice(0, 60) ?? (s.projectPath.split('/').filter(Boolean).pop() ?? s.projectPath)
+        items.push({ id: `chat:${s.id}`, kind: 'chat', label, hint: relativeTime(s.timestamp), meta: s })
       }
     } catch {}
     // Skills (best-effort)
@@ -205,8 +211,8 @@ export default function App() {
     if (item.kind === 'action' && item.id === 'action:new-chat') {
       handleNewChat()
     } else if (item.kind === 'chat' && item.meta) {
-      const session = item.meta as import('../shared/types').RecentSession
-      handleResumeSession(session.projectPath, session.projectPath)
+      const session = item.meta as { id: string; projectPath: string; title: string }
+      handleResumeSession(session.id, session.projectPath, session.title)
     } else if (item.kind === 'skill') {
       // Future: send /skill to active terminal. For MVP, just close.
     }
@@ -231,14 +237,34 @@ export default function App() {
     return () => window.removeEventListener('show-toast', handler)
   }, [])
 
+  // When the claude process inside a tab exits (crash, /exit, etc.), close
+  // the tab automatically — otherwise the user is left with a dead tab that
+  // looks live but does nothing. Read tabs from a ref so the listener is
+  // only registered once.
+  useEffect(() => {
+    if (!window.api.onPtyExit) return
+    const off = window.api.onPtyExit((ptyId: string) => {
+      const tab = tabsRef.current.find(t => t.ptyId === ptyId)
+      if (tab) {
+        dispatch({ type: 'CLOSE_TAB', tabId: tab.id })
+      }
+    })
+    return () => off?.()
+  }, [dispatch])
+
   // Poll for tab-title updates: when claude assigns a name (custom-title / ai-title)
   // to the session backing a chat tab, refresh the tab label to match.
   // Use a ref so the interval is set up ONCE and not torn down on every tab change.
   const tabsRef = useRef(state.tabs)
   useEffect(() => { tabsRef.current = state.tabs }, [state.tabs])
 
+  // Suspend the poll entirely when no chat tabs exist — no point firing
+  // a 4-second timer that early-returns. The interval is recreated when
+  // hasChatTabs flips back to true (e.g. the user opens a new chat).
+  const hasChatTabs = state.tabs.some(t => t.kind === 'folder-chat' || t.kind === 'standalone-chat')
   useEffect(() => {
     if (!window.api.findSessionTitle) return
+    if (!hasChatTabs) return
     const runPoll = async () => {
       const chatTabs = tabsRef.current.filter(t => t.kind === 'folder-chat' || t.kind === 'standalone-chat')
       if (chatTabs.length === 0) return
@@ -268,7 +294,7 @@ export default function App() {
     runPoll()
     const interval = setInterval(runPoll, 4000)
     return () => clearInterval(interval)
-  }, [dispatch])
+  }, [dispatch, hasChatTabs])
 
   const dismissToast = useCallback(() => setCurrentToast(null), [])
 
@@ -278,7 +304,7 @@ export default function App() {
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
         <Sidebar onNewChat={handleNewChat}>
           <FileExplorer />
-          <RecentSessions onResumeSession={handleResumeSession} />
+          <RecentSessions onResumeSession={handleResumeSession} onNewChat={handleNewChat} />
           <AutomationsPreview onOpen={() => dispatch({ type: 'SET_ACTIVE_TAB', tabId: 'automations' })} />
           <SkillsLauncher compact />
         </Sidebar>
