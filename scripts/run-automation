@@ -98,8 +98,29 @@ ms_now() { python3 -c 'import time;print(int(time.time()*1000))'; }
 START_MS=$(ms_now)
 cd "$FOLDER" || { write_status "failed" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" 0 1 null null "folder not found: $FOLDER"; exit 1; }
 
+# `timeout` is GNU coreutils — not present on macOS by default. Try the
+# obvious variants, then fall back to a python3 wrapper that mimics the
+# coreutils behavior (exit 124 on timeout).
+run_with_timeout() {
+  local mins="$1"; shift
+  if command -v timeout >/dev/null 2>&1; then
+    timeout "${mins}m" "$@"
+  elif command -v gtimeout >/dev/null 2>&1; then
+    gtimeout "${mins}m" "$@"
+  else
+    python3 -c '
+import subprocess, sys
+timeout_sec = int(sys.argv[1]) * 60
+try:
+  sys.exit(subprocess.run(sys.argv[2:], timeout=timeout_sec).returncode)
+except subprocess.TimeoutExpired:
+  sys.exit(124)
+' "$mins" "$@"
+  fi
+}
+
 set +e
-timeout "${TIMEOUT_MIN}m" claude -p "/skill ${SKILL}" --model "${MODEL}" > "$LOG" 2>&1
+run_with_timeout "$TIMEOUT_MIN" claude -p "/skill ${SKILL}" --model "${MODEL}" > "$LOG" 2>&1
 EXIT_CODE=$?
 set -e
 
