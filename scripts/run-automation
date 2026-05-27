@@ -60,7 +60,7 @@ write_status() {
     --argjson tokensUsed "${5:-null}" \
     --argjson costUsd "${6:-null}" \
     --arg failureReason "${7:-}" \
-    '{runId:$runId, automationId:$automationId, state:$state, startedAt:$startedAt, finishedAt:($finishedAt | select(. != "") // null), durationMs:$durationMs, exitCode:$exitCode, tokensUsed:$tokensUsed, costUsd:$costUsd, triggeredBy:$triggeredBy, failureReason:($failureReason | select(. != ""))}' \
+    '{runId:$runId, automationId:$automationId, state:$state, startedAt:$startedAt, finishedAt:($finishedAt | select(. != "") // null), durationMs:$durationMs, exitCode:$exitCode, tokensUsed:$tokensUsed, costUsd:$costUsd, triggeredBy:$triggeredBy, failureReason:($failureReason | select(. != "") // null)}' \
     > "$STATUS"
 }
 
@@ -129,7 +129,7 @@ except subprocess.TimeoutExpired:
 }
 
 set +e
-run_with_timeout "$TIMEOUT_MIN" claude -p "/skill ${SKILL}" --model "${MODEL}" > "$LOG" 2>&1
+run_with_timeout "$TIMEOUT_MIN" claude -p "/${SKILL}" --model "${MODEL}" > "$LOG" 2>&1
 EXIT_CODE=$?
 set -e
 
@@ -137,14 +137,29 @@ FINISHED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 END_MS=$(ms_now)
 DURATION=$((END_MS - START_MS))
 
-# Best-effort cost + token extraction from log
-COST=$(grep -oE '\$[0-9]+\.[0-9]+' "$LOG" | tail -1 | sed 's/\$//' || echo "")
-TOKENS=$(grep -oE '[0-9]+(\.[0-9]+)?[KM]? tokens' "$LOG" | tail -1 | sed -E 's/ tokens//' || echo "")
+# Best-effort cost + token extraction from log.
+# Output must be valid JSON for --argjson — anything with K/M suffix or empty
+# is normalized to "null" so jq doesn't choke and produce an empty status.json.
+RAW_COST=$(grep -oE '\$[0-9]+\.[0-9]+' "$LOG" | tail -1 | sed 's/\$//' || echo "")
+RAW_TOKENS=$(grep -oE '[0-9]+(\.[0-9]+)?[KM]? tokens' "$LOG" | tail -1 | sed -E 's/ tokens//' || echo "")
+to_json_number() {
+  case "$1" in
+    *K) echo "$(awk -v v="${1%K}" 'BEGIN{printf "%.0f", v*1000}')" ;;
+    *M) echo "$(awk -v v="${1%M}" 'BEGIN{printf "%.0f", v*1000000}')" ;;
+    "" ) echo "null" ;;
+    *)
+      # Plain number or anything else — accept only if it parses as a number.
+      if [[ "$1" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then echo "$1"; else echo "null"; fi
+      ;;
+  esac
+}
+COST=$(to_json_number "$RAW_COST")
+TOKENS=$(to_json_number "$RAW_TOKENS")
 
 if [ "$EXIT_CODE" = 124 ]; then
   write_status "timeout" "$FINISHED_AT" "$DURATION" "$EXIT_CODE" null null "exceeded ${TIMEOUT_MIN}min"
 elif [ "$EXIT_CODE" = 0 ]; then
-  write_status "completed" "$FINISHED_AT" "$DURATION" "$EXIT_CODE" "${TOKENS:-null}" "${COST:-null}"
+  write_status "completed" "$FINISHED_AT" "$DURATION" "$EXIT_CODE" "$TOKENS" "$COST"
 else
-  write_status "failed" "$FINISHED_AT" "$DURATION" "$EXIT_CODE" "${TOKENS:-null}" "${COST:-null}" "exit $EXIT_CODE"
+  write_status "failed" "$FINISHED_AT" "$DURATION" "$EXIT_CODE" "$TOKENS" "$COST" "exit $EXIT_CODE"
 fi
