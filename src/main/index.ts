@@ -6,6 +6,7 @@ import { destroyAllPtySessions } from './claude-bridge'
 import { scheduler } from './scheduler'
 import { startRunsWatcher, stopRunsWatcher } from './scheduler/runs-watcher'
 import { runCatchup, sweepOrphans } from './scheduler/catchup'
+import { stopWatching as stopFileWatcher } from './file-watcher'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -83,7 +84,10 @@ app.on('before-quit', () => {
   destroyAllPtySessions()
 })
 
-app.on('will-quit', stopRunsWatcher)
+app.on('will-quit', () => {
+  stopRunsWatcher()
+  stopFileWatcher()
+})
 
 app.on('window-all-closed', () => {
   app.quit()

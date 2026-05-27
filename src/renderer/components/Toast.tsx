@@ -55,8 +55,10 @@ export default function Toast({ message, onDismiss }: Props) {
       }}>
         {message}
       </span>
-      <span
+      <button
+        type="button"
         onClick={handleDismiss}
+        aria-label="Dismiss notification"
         style={{
           color: '#666',
           cursor: 'pointer',
@@ -64,10 +66,13 @@ export default function Toast({ message, onDismiss }: Props) {
           lineHeight: '20px',
           flexShrink: 0,
           marginLeft: 4,
+          background: 'transparent',
+          border: 'none',
+          padding: 0,
         }}
       >
         ×
-      </span>
+      </button>
     </div>
   )
 }

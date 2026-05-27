@@ -88,8 +88,15 @@ html, body, #root {
   color: var(--text-muted);
   font-size: 13px;
   line-height: 1;
+  /* Reset button defaults so `<button class="x">` matches the previous span. */
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
 }
 .tab .x:hover { background: rgba(45,55,72,0.1); color: var(--text-primary); }
+.tab .x:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 1px; }
 .tab.active .dirty { color: var(--accent-primary); font-size: 14px; line-height: 1; }
 
 /* Tab grouping by folder */

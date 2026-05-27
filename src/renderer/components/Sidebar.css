@@ -35,8 +35,14 @@
   font-weight: 400;
   padding: 0 4px;
   line-height: 1;
+  /* Reset button defaults so `<button class="add">` matches the previous span. */
+  background: transparent;
+  border: none;
+  font-family: inherit;
 }
 .sidebar-header .add:hover { color: var(--accent-primary-hover); }
+.sidebar-header .add:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 1px; }
+.sidebar-header .add:disabled { color: var(--text-muted); cursor: default; }
 
 /* Prominent "New Chat" button at the top of the sidebar */
 .new-chat-btn {
@@ -175,5 +181,10 @@
   letter-spacing: 0;
   cursor: pointer;
   padding: 0 4px;
+  /* Reset button defaults when used on `<button class="view-all">`. */
+  background: transparent;
+  border: none;
+  font-family: inherit;
 }
 .view-all:hover { color: var(--accent-primary-hover); }
+.view-all:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 1px; }

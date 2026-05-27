@@ -48,14 +48,21 @@ export default function FolderGroup({ folderPath, tabs, activeTabId, onTabClick,
             {tab.label}
             {tab.isDirty && <span className="dirty">●</span>}
             {isActiveChat && (
-              <span
+              <button
+                type="button"
                 className="x"
                 title="Reload at current size (⌘⇧R)"
+                aria-label="Reload chat at current window size"
                 onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('reload-chat-tab')) }}
-              >↻</span>
+              >↻</button>
             )}
             {tab.closeable && (
-              <span className="x" onClick={(e) => { e.stopPropagation(); onTabClose(tab.id) }}>×</span>
+              <button
+                type="button"
+                className="x"
+                aria-label={`Close ${tab.label}`}
+                onClick={(e) => { e.stopPropagation(); onTabClose(tab.id) }}
+              >×</button>
             )}
           </div>
         )

@@ -15,6 +15,15 @@ ENV_FILE="$CLAUDE_IDE_DIR/env.json"
 
 [ -f "$AUTOMATIONS_FILE" ] || { echo "automations.json missing" >&2; exit 3; }
 
+# Every config/dependency lookup below uses jq. If it's missing, the script
+# would silently produce empty strings and downstream `claude` invocation
+# would fail with cryptic errors. Bail early with a useful message instead.
+# Install via: brew install jq
+command -v jq >/dev/null 2>&1 || {
+  echo "run-automation: jq not found. Install with: brew install jq" >&2
+  exit 5
+}
+
 # Source plist-equivalent env so PATH includes claude
 if [ -f "$ENV_FILE" ]; then
   export HOME="$(jq -r '.HOME' "$ENV_FILE")"

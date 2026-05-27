@@ -2,7 +2,7 @@ import { ipcMain, dialog, app, BrowserWindow, net, Notification } from 'electron
 import { scheduler } from './scheduler'
 import { readdir, readFile, writeFile, stat } from 'fs/promises'
 import { readFileSync, existsSync, writeFileSync, mkdirSync, readdirSync, statSync } from 'fs'
-import { join, relative } from 'path'
+import { join, relative, dirname } from 'path'
 import { homedir } from 'os'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
@@ -11,7 +11,18 @@ const execFileAsync = promisify(execFile)
 import { getGitFileStatuses, getGitBranch } from './git-status'
 import { createPtySession, writePty, resizePty, destroyPty } from './claude-bridge'
 import { startWatching, stopWatching } from './file-watcher'
+import { detectClaudeBin } from './claude-env'
 import type { FileNode, RecentSession } from '../shared/types'
+
+// Memoize the claude binary lookup. detectClaudeBin shells out (execSync),
+// and inline edit / session summary call this hot path. One lookup per
+// process is fine — the user isn't going to move claude mid-session.
+let cachedClaudeBin: string | null = null
+function claudeBin(): string {
+  if (cachedClaudeBin) return cachedClaudeBin
+  cachedClaudeBin = detectClaudeBin()
+  return cachedClaudeBin
+}
 
 const sessionsFile = () => join(app.getPath('userData'), 'recent-sessions.json')
 const teamStatsConfigFile = () => join(app.getPath('userData'), 'team-stats-config.json')
@@ -320,7 +331,7 @@ export function registerIpcHandlers(): void {
 
   // Cmd+K inline edit — sends selected code + prompt to Claude CLI
   ipcMain.handle('claude:inlineEdit', async (_, code: string, prompt: string, filePath: string): Promise<string> => {
-    const claudePath = join(process.env.HOME || '', '.local', 'bin', 'claude')
+    const claudePath = claudeBin()
     const fullPrompt = `You are editing code inline. The user selected this code from ${filePath}:\n\n\`\`\`\n${code}\n\`\`\`\n\nThe user's instruction: ${prompt}\n\nRespond with ONLY the replacement code. No explanations, no markdown fences, no commentary. Just the code that should replace the selection.`
 
     try {
@@ -329,7 +340,7 @@ export function registerIpcHandlers(): void {
         maxBuffer: 1024 * 1024,
         env: {
           ...process.env,
-          PATH: `${process.env.HOME}/.local/bin:${process.env.PATH}`,
+          PATH: `${dirname(claudePath)}:${process.env.PATH}`,
         },
       })
       return stdout.trim()
@@ -393,7 +404,7 @@ export function registerIpcHandlers(): void {
 
       if (messages.length === 0) return ''
 
-      const claudePath = '/opt/homebrew/bin/claude'
+      const claudePath = claudeBin()
       const prompt = `In 5-8 words, what was this session about? Just the topic, no prefix:\n${messages.slice(0, 5).join('\n').slice(0, 500)}`
 
       const { stdout } = await execFileAsync(claudePath, ['-p', prompt], {
@@ -401,9 +412,7 @@ export function registerIpcHandlers(): void {
         maxBuffer: 512 * 1024,
         env: {
           ...process.env,
-          CLAUDE_CODE_USE_BEDROCK: 'true',
-          AWS_PROFILE: 'bedrock-users',
-          AWS_REGION: 'us-west-2'
+          PATH: `${dirname(claudePath)}:${process.env.PATH}`,
         }
       })
       return stdout.trim().slice(0, 60)

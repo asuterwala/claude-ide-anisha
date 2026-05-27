@@ -2,6 +2,7 @@ import { promises as fs } from 'fs'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
 import { join } from 'path'
+import { userInfo } from 'os'
 import {
   AUTOMATIONS_FILE, PLISTS_DIR, RUNS_DIR, BIN_DIR,
   CLAUDE_IDE_DIR, ENV_CONFIG_FILE, RUN_AUTOMATION_SCRIPT,
@@ -92,12 +93,19 @@ async function launchctl(args: string[]): Promise<void> {
   }
 }
 
+// `load -w` / `unload -w` is the legacy form (Apple has been deprecating it
+// for years). `bootstrap gui/<uid>` / `bootout gui/<uid>/<label>` is the
+// modern equivalent and works on macOS 10.10+.
+function userDomain(): string {
+  return `gui/${userInfo().uid}`
+}
+
 async function loadPlist(id: string): Promise<void> {
-  await launchctl(['load', '-w', plistPath(id)])
+  await launchctl(['bootstrap', userDomain(), plistPath(id)])
 }
 
 async function unloadPlist(id: string): Promise<void> {
-  try { await launchctl(['unload', '-w', plistPath(id)]) } catch {}
+  try { await launchctl(['bootout', `${userDomain()}/${plistLabel(id)}`]) } catch {}
 }
 
 function newId(name: string): string {
@@ -117,8 +125,22 @@ export const scheduler = {
     list.push(a)
     await writeAutomations(list)
     if (a.enabled && a.schedule) {
-      await writePlist(a)
-      await loadPlist(id)
+      try {
+        await writePlist(a)
+        await loadPlist(id)
+      } catch (err) {
+        // Roll back: a row in automations.json without a registered plist
+        // looks scheduled but never fires. Remove and rethrow so the
+        // renderer's create() promise rejects and the UI surfaces an error.
+        const revertList = await readAutomations()
+        const revertIdx = revertList.findIndex(x => x.id === id)
+        if (revertIdx !== -1) {
+          revertList.splice(revertIdx, 1)
+          await writeAutomations(revertList)
+        }
+        try { await fs.unlink(plistPath(id)) } catch {}
+        throw err
+      }
     }
     return a
   },
@@ -151,7 +173,14 @@ export const scheduler = {
   },
 
   async runNow(id: string): Promise<string> {
-    const ts = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 15) + 'Z'
+    // Match the shell script's `date -u +%Y%m%dT%H%M%SZ` so this runId
+    // actually corresponds to a real status.json the watcher will emit.
+    // Previously diverged by missing the `T` separator, making the return
+    // value useless for any caller that wanted to track the run.
+    const ts = new Date().toISOString()
+      .replace(/-/g, '')
+      .replace(/:/g, '')
+      .replace(/\.\d{3}Z$/, 'Z')
     const runId = `${id}__${ts}`
     const child = (await import('child_process')).spawn(RUN_AUTOMATION_SCRIPT, [id, 'manual'], {
       detached: true, stdio: 'ignore',

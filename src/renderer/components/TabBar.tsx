@@ -32,9 +32,22 @@ export default function TabBar() {
     >
       {iconFor(t)} {t.label}
       {isActiveChat(t) && (
-        <span className="x" title="Reload at current size (⌘⇧R)" onClick={onReload}>↻</span>
+        <button
+          type="button"
+          className="x"
+          title="Reload at current size (⌘⇧R)"
+          aria-label="Reload chat at current window size"
+          onClick={onReload}
+        >↻</button>
       )}
-      {t.closeable && <span className="x" onClick={(e) => { e.stopPropagation(); onClose(t.id) }}>×</span>}
+      {t.closeable && (
+        <button
+          type="button"
+          className="x"
+          aria-label={`Close ${t.label}`}
+          onClick={(e) => { e.stopPropagation(); onClose(t.id) }}
+        >×</button>
+      )}
     </div>
   )
 

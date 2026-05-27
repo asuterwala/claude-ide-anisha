@@ -43,7 +43,12 @@ export default function AutomationsPreview({ onOpen }: { onOpen: () => void }) {
     <section className="sidebar-section">
       <div className="sidebar-header">
         <span>Automations</span>
-        <span className="view-all" onClick={onOpen}>View all →</span>
+        <button
+          type="button"
+          className="view-all"
+          onClick={onOpen}
+          aria-label="View all automations"
+        >View all →</button>
       </div>
       {automations.length === 0 ? (
         <div className="row" onClick={onOpen} style={{ color: 'var(--text-muted)' }}>
