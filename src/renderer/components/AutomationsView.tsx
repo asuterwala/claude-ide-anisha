@@ -15,7 +15,7 @@ function countByState(runs: { state: string }[]) {
 }
 
 export default function AutomationsView({ visible }: Props) {
-  const [view, setView] = useState<'timeline' | 'list'>('timeline')
+  const [view, setView] = useState<'timeline' | 'list'>('list')
   const [formOpen, setFormOpen] = useState(false)
   const { automations, runs, create, remove, runNow } = useAutomations()
 
