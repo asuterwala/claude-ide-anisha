@@ -4,8 +4,9 @@
   flex: 1;
   overflow-y: auto;
   padding: 32px 24px 40px;
-  /* Transparent so #root's pastel sunrise gradient shows through */
-  background: transparent;
+  /* Pastel sunrise gradient. Lives on .dashboard (not #root) so the
+     chat/terminal tabs stay solid-white for legibility. */
+  background: linear-gradient(180deg, #FBF8FB 0%, #F8F9FA 50%, #F0F4F8 100%);
 }
 
 /* ── Content width cap ─────────────────────────────────── */
