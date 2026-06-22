@@ -153,27 +153,22 @@ export default function Dashboard({ visible }: Props) {
 
       <svg
         className="dashboard-mountains"
-        viewBox="0 0 1200 320"
+        viewBox="0 0 600 320"
         preserveAspectRatio="none"
         aria-hidden="true"
       >
-        {/* Sun */}
-        <circle cx="940" cy="72" r="38" fill="#FFD9A8" opacity="0.75" />
-        <circle cx="940" cy="72" r="60" fill="#FFE4B5" opacity="0.25" />
-        {/* Distant range — palest lavender */}
+        <defs>
+          <linearGradient id="dash-sweep" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="#C7A8C9" stopOpacity="0" />
+            <stop offset="35%" stopColor="#C7A8C9" stopOpacity="0.4" />
+            <stop offset="100%" stopColor="#94B5A2" stopOpacity="0.7" />
+          </linearGradient>
+          <filter id="dash-blur"><feGaussianBlur stdDeviation="2" /></filter>
+        </defs>
         <path
-          d="M0,210 L120,140 L230,180 L360,110 L470,160 L600,90 L720,150 L840,100 L960,170 L1080,120 L1200,180 L1200,320 L0,320 Z"
-          fill="#D9C9E8" opacity="0.55"
-        />
-        {/* Middle range — soft mauve */}
-        <path
-          d="M0,250 L100,200 L220,240 L340,180 L460,230 L580,200 L700,240 L820,190 L940,235 L1060,200 L1200,235 L1200,320 L0,320 Z"
-          fill="#C7A8C9" opacity="0.55"
-        />
-        {/* Foreground — mint */}
-        <path
-          d="M0,290 L110,255 L230,285 L360,235 L490,275 L610,250 L740,285 L860,245 L980,280 L1100,255 L1200,275 L1200,320 L0,320 Z"
-          fill="#B8D6C5" opacity="0.7"
+          d="M-20,250 C 80,210 180,265 300,230 C 420,200 500,275 620,240 L620,330 L-20,330 Z"
+          fill="url(#dash-sweep)"
+          filter="url(#dash-blur)"
         />
       </svg>
     </div>
