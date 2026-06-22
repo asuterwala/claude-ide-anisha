@@ -151,26 +151,6 @@ export default function Dashboard({ visible }: Props) {
         )}
       </section>
 
-      <svg
-        className="dashboard-mountains"
-        viewBox="0 0 600 320"
-        preserveAspectRatio="none"
-        aria-hidden="true"
-      >
-        <defs>
-          <linearGradient id="dash-sweep" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="#C7A8C9" stopOpacity="0" />
-            <stop offset="35%" stopColor="#C7A8C9" stopOpacity="0.4" />
-            <stop offset="100%" stopColor="#94B5A2" stopOpacity="0.7" />
-          </linearGradient>
-          <filter id="dash-blur"><feGaussianBlur stdDeviation="2" /></filter>
-        </defs>
-        <path
-          d="M-20,250 C 80,210 180,265 300,230 C 420,200 500,275 620,240 L620,330 L-20,330 Z"
-          fill="url(#dash-sweep)"
-          filter="url(#dash-blur)"
-        />
-      </svg>
     </div>
   )
 }
