@@ -4,9 +4,15 @@
   flex: 1;
   overflow-y: auto;
   padding: 32px 24px 40px;
-  /* Pastel sunrise gradient. Lives on .dashboard (not #root) so the
-     chat/terminal tabs stay solid-white for legibility. */
-  background: linear-gradient(180deg, #FBF8FB 0%, #F8F9FA 50%, #F0F4F8 100%);
+  /* Pastel sunrise landscape. Lives on .dashboard (not #root) so the
+     chat/terminal tabs stay solid-white for legibility. Saturated enough
+     to actually read as a gradient rather than near-white-on-white. */
+  background: linear-gradient(180deg,
+    #FFE9DC 0%,     /* peach sky */
+    #FBE4EE 28%,    /* soft pink */
+    #ECE4F4 60%,    /* pale lavender */
+    #DCEFE6 100%    /* mint */
+  );
 }
 
 /* ── Content width cap ─────────────────────────────────── */
